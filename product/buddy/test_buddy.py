@@ -132,6 +132,8 @@ class SimplifyTests(unittest.TestCase):
         self.assertNotIn('st.expander("Vraag het Boris"', app)
         self.assertIn('st.expander("System prompt (demo)"', app)
         self.assertIn("CHAT_PLACEHOLDER", app)
+        self.assertIn("audience_mode", app)
+        self.assertIn('query_params.get("demo"', app)
 
 
 class CopyTests(unittest.TestCase):
@@ -300,6 +302,26 @@ class SystemPromptTests(unittest.TestCase):
         self.assertIn("Je bent een testdemo.", rendered)
         self.assertIn("## Sessie-context", rendered)
         self.assertIn("Pietje", rendered)
+
+    def test_audience_mode_hides_workshop_controls(self):
+        from streamlit.testing.v1 import AppTest
+
+        app_path = str(EXAMPLE_CONTRACT.parent / "app.py")
+        workshop = AppTest.from_file(app_path, default_timeout=45).run()
+        self.assertFalse(workshop.exception)
+        self.assertTrue(any("Live model" in t.label for t in workshop.toggle))
+        self.assertTrue(any(t.label == "System prompt" for t in workshop.text_area))
+        self.assertTrue(any("OpenAI API key" in (i.label or "") for i in workshop.text_input))
+
+        demo = AppTest.from_file(app_path, default_timeout=45)
+        demo.query_params["demo"] = "1"
+        demo.run()
+        self.assertFalse(demo.exception)
+        self.assertFalse(any("Live model" in t.label for t in demo.toggle))
+        self.assertFalse(any(t.label == "System prompt" for t in demo.text_area))
+        self.assertFalse(any("OpenAI API key" in (i.label or "") for i in demo.text_input))
+        self.assertIn("Hoi Pietje", [t.value for t in demo.title])
+        self.assertIn("4. Vraag het Boris", [s.value for s in demo.subheader])
 
     def test_empty_question_matches_chat_copy(self):
         river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")

@@ -53,10 +53,29 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+
+def audience_mode() -> bool:
+    """Zaalweergave via ?demo=1 — hides workshop controls, keeps the 3-step UI."""
+    try:
+        raw = st.query_params.get("demo", "")
+    except Exception:
+        raw = ""
+    if isinstance(raw, list):
+        raw = raw[0] if raw else ""
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
+AUDIENCE = audience_mode()
 st.markdown(
     f"<style>{Path(__file__).with_name('styles.css').read_text(encoding='utf-8')}</style>",
     unsafe_allow_html=True,
 )
+if AUDIENCE:
+    st.markdown(
+        '<div class="buddy-audience-flag" aria-hidden="true"></div>',
+        unsafe_allow_html=True,
+    )
 
 
 @st.cache_data
@@ -248,13 +267,17 @@ by_id = {p["patient"]["persona_id"]: p for p in payloads}
 with st.sidebar:
     st.markdown("### Boris")
     use_live_default = models_available()
-    use_live = st.toggle(
-        "Live model (final A/B)",
-        value=use_live_default,
-        help="Aan: final model A (elastic-net) en B (XGBoost). Uit: mock fixtures.",
-        disabled=not use_live_default,
-    )
-    st.caption("Small steps. Big impact.")
+    if AUDIENCE:
+        use_live = use_live_default
+        st.caption("Small steps. Big impact.")
+    else:
+        use_live = st.toggle(
+            "Live model (final A/B)",
+            value=use_live_default,
+            help="Aan: final model A (elastic-net) en B (XGBoost). Uit: mock fixtures.",
+            disabled=not use_live_default,
+        )
+        st.caption("Small steps. Big impact.")
     st.markdown("**Wie ben jij?**")
     persona_id = st.radio(
         "Demo-persona",
@@ -279,28 +302,35 @@ with st.sidebar:
     patient = baseline["patient"]
     st.caption(f"{patient['display_name']}, {patient.get('age', '—')} · start {body['weight_kg']:.0f} kg")
     stored_key = _secrets_openai_key()
-    with st.expander("OpenAI-sleutel", expanded=not openai_key_configured(stored_key)):
-        st.text_input(
-            "OpenAI API key",
-            type="password",
-            key="openai_api_key",
-            placeholder="sk-…",
-            help="Zelfde patroon als eerdere opdracht: plak hier, of zet OPENAI_API_KEY in .streamlit/secrets.toml. Wordt niet gecommit.",
-        )
-        st.caption("Of: omgeving OPENAI_API_KEY, of kopieer secrets.toml.example naar secrets.toml.")
     if "system_prompt" not in st.session_state:
         st.session_state.system_prompt = load_default_system_prompt()
     if st.session_state.pop("system_prompt_reset", False):
         st.session_state.system_prompt = load_default_system_prompt()
-    with st.expander("System prompt (demo)", expanded=False):
-        st.caption(
-            "Zoals bij Barbecue Bob: vaste rol-instructie voor OpenAI. "
-            "Patiënten zien dit niet in de hoofdchat. Sessie-context van Pietje/Sam/Noor wordt eronder geplakt."
-        )
-        st.text_area("System prompt", key="system_prompt", height=280)
-        if st.button("Herstel default"):
-            st.session_state.system_prompt_reset = True
+    if not AUDIENCE:
+        with st.expander("OpenAI-sleutel", expanded=not openai_key_configured(stored_key)):
+            st.text_input(
+                "OpenAI API key",
+                type="password",
+                key="openai_api_key",
+                placeholder="sk-…",
+                help="Zelfde patroon als eerdere opdracht: plak hier, of zet OPENAI_API_KEY in .streamlit/secrets.toml. Wordt niet gecommit.",
+            )
+            st.caption("Of: omgeving OPENAI_API_KEY, of kopieer secrets.toml.example naar secrets.toml.")
+        with st.expander("System prompt (demo)", expanded=False):
+            st.caption(
+                "Zoals bij Barbecue Bob: vaste rol-instructie voor OpenAI. "
+                "Patiënten zien dit niet in de hoofdchat. Sessie-context van Pietje/Sam/Noor wordt eronder geplakt."
+            )
+            st.text_area("System prompt", key="system_prompt", height=280)
+            if st.button("Herstel default"):
+                st.session_state.system_prompt_reset = True
+                st.rerun()
+        if st.button("Zaalweergave"):
+            st.query_params["demo"] = "1"
             st.rerun()
+        st.caption("Of plak `?demo=1` achter de URL. Keuken (key, prompt, live-toggle) gaat dan weg.")
+    else:
+        st.caption("Zaalweergave. Haal `?demo=1` uit de URL voor de werkplaats.")
 
 openai_key = resolve_openai_api_key(
     st.session_state.get("openai_api_key"),
@@ -357,7 +387,9 @@ with c1:
     render_risk(risks["t1_t2"], "Korte termijn")
 with c2:
     render_risk(risks["t1_t3"], "Lange termijn")
-if use_live:
+if AUDIENCE:
+    st.caption("Klein lettertje: kans dat HbA1c boven 6,5% uitkomt. Geen diagnose.")
+elif use_live:
     st.caption("Final modellen A (elastic-net) en B (XGBoost). Proxy diabetes / HbA1c > 6,5%. Geen diagnose.")
 else:
     st.caption("Mock-cijfers. Klein lettertje: kans dat HbA1c boven 6,5% uitkomt. Geen diagnose.")
@@ -382,7 +414,9 @@ st.subheader("4. Vraag het Boris")
 if "chat" not in st.session_state or st.session_state.get("chat_persona") != persona_id:
     st.session_state.chat = []
     st.session_state.chat_persona = persona_id
-if openai_key:
+if AUDIENCE:
+    st.caption("Stel een vraag over wandelen, eten, slapen, roken of alcohol.")
+elif openai_key:
     st.caption(f"Verbonden met OpenAI · {OPENAI_MODEL}")
 else:
     st.caption("Geen API-sleutel. Plak er een in de sidebar — tot die tijd vaste teksten.")

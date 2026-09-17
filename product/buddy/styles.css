@@ -22,3 +22,11 @@ div[data-testid="stChatInput"] {
 header[data-testid="stHeader"] {
   background: transparent;
 }
+
+/* Zaalweergave (?demo=1): hide Streamlit chrome, keep the 3-step page */
+.stApp:has(.buddy-audience-flag) header [data-testid="stToolbar"],
+.stApp:has(.buddy-audience-flag) [data-testid="stDecoration"],
+.stApp:has(.buddy-audience-flag) footer,
+.stApp:has(.buddy-audience-flag) #MainMenu {
+  display: none !important;
+}
