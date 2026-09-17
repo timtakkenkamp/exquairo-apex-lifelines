@@ -36,7 +36,7 @@ Official mascot: `product/buddy/assets/boris-mascot.png` (top-left header). See 
 ## Kept
 
 - Two big numbers: korte- / lange-termijn risico op diabetes (HbA1c > 6.5% only as small disclaimer)
-- Weight/BMI what-if (live risks + bars)
+- Weight/BMI what-if plus taille, beweegminuten, slaap and suikerdranken (live risks + bars)
 - Movement detail: Groningen Plantsoen–gracht–Martini-lus + back
 - Personas Pietje / Sam / Noor
 - Guardrails: no meds, no triage
@@ -57,11 +57,14 @@ De system prompt staat in `prompts/boris_system.md` (Barbecue Bob-stijl: rol, to
 ## What-if formula
 
 ```
-short_term = clip(base_short + 0.025 * (BMI - BMI0), 0.02, 0.95)
-long_term  = clip(base_long  + 0.035 * (BMI - BMI0), 0.03, 0.97)
+short_term = clip(base_short + 0.025 * dBMI + lifestyle_short + 0.004 * extra_cm, 0.02, 0.95)
+long_term  = clip(base_long  + 0.035 * dBMI + lifestyle_long  + 0.006 * extra_cm, 0.03, 0.97)
+extra_cm   = taille - (taille0 + 0.7 * dkg)   # 0 when taille only follows gewicht
+lifestyle_short = -0.008 * d_move30 - 0.012 * d_sleep + 0.006 * d_drinks
+lifestyle_long  = -0.011 * d_move30 - 0.016 * d_sleep + 0.008 * d_drinks
 ```
 
-Not a trained model. BMI direction flips at 25.
+Not a trained model. BMI direction flips at 25. Height/length is not a patient lever. Live models keep the 22 T1 columns; taille maps to `WAIST_T1` → `BRI_T1`. Movement, sleep and sugary drinks are mock-overlaid on the displayed what-if.
 
 ```bash
 uv run python product/buddy/test_buddy.py

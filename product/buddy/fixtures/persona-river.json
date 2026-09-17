@@ -13,6 +13,10 @@
     "height_cm": 174,
     "weight_kg": 94.5,
     "bmi": 31.2,
+    "waist_cm": 106,
+    "move_min_week": 30,
+    "sleep_hours": 5.5,
+    "sugary_drinks_week": 7,
     "snapshot": {
       "hba1c_t1": "6.2%",
       "bmi": "31.2",

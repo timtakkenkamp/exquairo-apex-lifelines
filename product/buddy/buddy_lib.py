@@ -85,15 +85,42 @@ PATIENT_RISK_COPY = {
 # Long-term moves a bit more so the two cards stay distinct in the demo.
 # BMI factor: importance = clip(base + 0.045 * (BMI - BMI0), 0.04, 0.70);
 #   direction flips at BMI 25 (below → lowers, at/above → raises).
-# Waist (if present): cm' = cm0 + 0.7 * (kg - kg0);
-#   importance = clip(base + 0.012 * (cm' - cm0), 0.04, 0.50).
+# Waist tracks weight unless the patient edits it:
+#   tracked = cm0 + 0.7 * (kg - kg0)
+#   extra_cm = cm_user - tracked   # 0 when the slider only follows weight
+#   short += 0.004 * extra_cm ; long += 0.006 * extra_cm
+#   importance = clip(base + 0.012 * (cm_user - cm0), 0.04, 0.50).
+# Extra lifestyle levers (same clip ranges; modest, intuitive, not clinical):
+#   Movement per 30 min/week: short += -0.008 * d_move ; long += -0.011 * d_move
+#   Sleep per hour/night:     short += -0.012 * d_sleep ; long += -0.016 * d_sleep
+#   Sugary drinks per drink/week: short += 0.006 * d_drinks ; long += 0.008 * d_drinks
 SHORT_TERM_BMI_COEF = 0.025
 LONG_TERM_BMI_COEF = 0.035
 BMI_FACTOR_COEF = 0.045
 WAIST_CM_PER_KG = 0.7
 WAIST_FACTOR_COEF = 0.012
+WAIST_EXTRA_SHORT_COEF = 0.004
+WAIST_EXTRA_LONG_COEF = 0.006
 BMI_DIRECTION_PIVOT = 25.0
 WEIGHT_LINKED_FACTORS = {"bmi", "waist", "weight"}
+MOVE_UNIT_MIN = 30.0
+SHORT_TERM_MOVE_COEF = -0.008
+LONG_TERM_MOVE_COEF = -0.011
+SPORTS_FACTOR_COEF = 0.028
+SHORT_TERM_SLEEP_COEF = -0.012
+LONG_TERM_SLEEP_COEF = -0.016
+SLEEP_FACTOR_COEF = 0.035
+SHORT_TERM_DRINK_COEF = 0.006
+LONG_TERM_DRINK_COEF = 0.008
+KCAL_DRINK_FACTOR_COEF = 0.018
+DEFAULT_MOVE_MIN_WEEK = 60.0
+DEFAULT_SLEEP_HOURS = 7.0
+DEFAULT_SUGARY_DRINKS_WEEK = 4.0
+WAIST_PIVOT_CM = 88.0
+MOVE_PROTECT_MIN = 150.0
+MOVE_RISK_MIN = 40.0
+SLEEP_PROTECT_HOURS = 7.0
+SLEEP_RISK_HOURS = 6.0
 
 # Lifestyle coaching only. Medical / diagnosis / medication / triage → deflect.
 _MEDICAL_RE = re.compile(
@@ -288,14 +315,29 @@ def risk_band(score: float) -> str:
 def _as_float(value: Any, default: float | None = None) -> float | None:
     if value is None or value == "":
         return default
+    if isinstance(value, str):
+        token = value.replace(",", ".").strip().split()[0] if value.strip() else ""
+        value = token
     try:
         return float(value)
     except (TypeError, ValueError):
         return default
 
 
+def _factor_measure(payload: dict[str, Any], factor_id: str) -> float | None:
+    for factor in payload.get("top_factors") or []:
+        if factor.get("id") == factor_id:
+            return _as_float(factor.get("patient_value"))
+    return None
+
+
+def _estimated_waist_cm(bmi: float) -> float:
+    """Fallback taille when a persona has no waist factor — not a clinical estimate."""
+    return clip(70.0 + 2.5 * (bmi - 22.0), 60.0, 140.0)
+
+
 def persona_body(payload: dict[str, Any]) -> dict[str, float]:
-    """Baseline height / weight / BMI / waist for the what-if control."""
+    """Baseline height / weight / BMI plus patient-changeable what-if levers."""
     patient = payload.get("patient") or {}
     snap = patient.get("snapshot") or {}
     height_cm = _as_float(patient.get("height_cm"), 170.0) or 170.0
@@ -303,19 +345,143 @@ def persona_body(payload: dict[str, Any]) -> dict[str, float]:
     weight_kg = _as_float(patient.get("weight_kg"))
     if weight_kg is None:
         weight_kg = bmi * (height_cm / 100.0) ** 2
-    waist_cm = None
-    for factor in payload.get("top_factors") or []:
-        if factor.get("id") == "waist":
-            waist_cm = _as_float(factor.get("patient_value"))
-            break
+    waist_cm = (
+        _as_float(patient.get("waist_cm"))
+        or _factor_measure(payload, "waist")
+        or _as_float(snap.get("waist"))
+    )
     if waist_cm is None:
-        waist_cm = _as_float(snap.get("waist"))
+        waist_cm = _estimated_waist_cm(bmi)
+    move_min = (
+        _as_float(patient.get("move_min_week"))
+        or _as_float(snap.get("move_min_week"))
+        or DEFAULT_MOVE_MIN_WEEK
+    )
+    sleep_hours = (
+        _as_float(patient.get("sleep_hours"))
+        or _as_float(snap.get("sleep_hours"))
+        or DEFAULT_SLEEP_HOURS
+    )
+    drinks = (
+        _as_float(patient.get("sugary_drinks_week"))
+        or _as_float(snap.get("sugary_drinks_week"))
+        or DEFAULT_SUGARY_DRINKS_WEEK
+    )
     return {
         "height_cm": height_cm,
         "weight_kg": weight_kg,
         "bmi": bmi,
-        "waist_cm": float(waist_cm) if waist_cm is not None else float("nan"),
+        "waist_cm": float(waist_cm),
+        "move_min_week": float(move_min),
+        "sleep_hours": float(sleep_hours),
+        "sugary_drinks_week": float(drinks),
     }
+
+
+def _risk_clip_range(risk_id: str) -> tuple[float, float]:
+    return (0.02, 0.95) if risk_id == "t1_t2" else (0.03, 0.97)
+
+
+def lifestyle_risk_delta(
+    body: dict[str, float],
+    *,
+    move_min_week: float,
+    sleep_hours: float,
+    sugary_drinks_week: float,
+) -> tuple[float, float]:
+    """Mock short/long deltas for movement, sleep, and sugary drinks.
+
+    Not a trained model. Per 30 beweegminuten, per slaapuur, per suikerdrank/week:
+        short += -0.008 * d_move30 - 0.012 * d_sleep + 0.006 * d_drinks
+        long  += -0.011 * d_move30 - 0.016 * d_sleep + 0.008 * d_drinks
+    """
+    d_move = (move_min_week - body["move_min_week"]) / MOVE_UNIT_MIN
+    d_sleep = sleep_hours - body["sleep_hours"]
+    d_drinks = sugary_drinks_week - body["sugary_drinks_week"]
+    short = (
+        SHORT_TERM_MOVE_COEF * d_move
+        + SHORT_TERM_SLEEP_COEF * d_sleep
+        + SHORT_TERM_DRINK_COEF * d_drinks
+    )
+    long = (
+        LONG_TERM_MOVE_COEF * d_move
+        + LONG_TERM_SLEEP_COEF * d_sleep
+        + LONG_TERM_DRINK_COEF * d_drinks
+    )
+    return short, long
+
+
+def _apply_lifestyle_factors(
+    factors: list[dict[str, Any]],
+    body: dict[str, float],
+    *,
+    move_min_week: float,
+    sleep_hours: float,
+    sugary_drinks_week: float,
+) -> None:
+    d_move = (move_min_week - body["move_min_week"]) / MOVE_UNIT_MIN
+    d_sleep = sleep_hours - body["sleep_hours"]
+    d_drinks = sugary_drinks_week - body["sugary_drinks_week"]
+    for factor in factors:
+        fid = factor.get("id")
+        base_imp = float(factor.get("importance") or 0)
+        if fid in {"sports", "cycle_commute"}:
+            sign = 1.0 if fid == "cycle_commute" or factor.get("direction") == "decreases_risk" else -1.0
+            if fid == "sports":
+                if move_min_week >= MOVE_PROTECT_MIN:
+                    factor["direction"] = "decreases_risk"
+                    sign = 1.0
+                elif move_min_week <= MOVE_RISK_MIN:
+                    factor["direction"] = "increases_risk"
+                    sign = -1.0
+            factor["importance"] = round(
+                clip(base_imp + sign * SPORTS_FACTOR_COEF * d_move, 0.04, 0.55), 4
+            )
+            if fid == "sports":
+                factor["patient_value"] = f"{move_min_week:.0f}"
+                factor["unit"] = "min/week"
+            factor["note"] = "Mock what-if contribution — not a trained attribution."
+        elif fid == "sleep":
+            if sleep_hours >= SLEEP_PROTECT_HOURS:
+                factor["direction"] = "decreases_risk"
+                sign = 1.0
+            elif sleep_hours <= SLEEP_RISK_HOURS:
+                factor["direction"] = "increases_risk"
+                sign = -1.0
+            else:
+                sign = 1.0 if factor.get("direction") == "decreases_risk" else -1.0
+            factor["importance"] = round(
+                clip(base_imp + sign * SLEEP_FACTOR_COEF * d_sleep, 0.04, 0.45), 4
+            )
+            factor["patient_value"] = f"{sleep_hours:.1f}"
+            factor["unit"] = "uur"
+            factor["note"] = "Mock what-if contribution — not a trained attribution."
+        elif fid == "kcal":
+            factor["importance"] = round(
+                clip(base_imp + KCAL_DRINK_FACTOR_COEF * d_drinks, 0.04, 0.40), 4
+            )
+            factor["note"] = "Mock what-if contribution — not a trained attribution."
+
+
+def _whatif_is_active(
+    *,
+    delta_kg: float,
+    waist_cm: float,
+    waist0: float,
+    move_min_week: float,
+    move0: float,
+    sleep_hours: float,
+    sleep0: float,
+    sugary_drinks_week: float,
+    drinks0: float,
+) -> bool:
+    return (
+        abs(delta_kg) >= 0.25
+        or abs(waist_cm - waist0) >= 0.5
+        or abs(move_min_week - move0) >= 5
+        or abs(sleep_hours - sleep0) >= 0.25
+        or abs(sugary_drinks_week - drinks0) >= 0.5
+    )
 
 
 def apply_weight_whatif(
@@ -323,14 +489,20 @@ def apply_weight_whatif(
     *,
     weight_kg: float | None = None,
     bmi: float | None = None,
+    waist_cm: float | None = None,
+    move_min_week: float | None = None,
+    sleep_hours: float | None = None,
+    sugary_drinks_week: float | None = None,
 ) -> dict[str, Any]:
-    """Return a copy of the persona with mock risks and weight-linked factors updated.
+    """Return a copy of the persona with mock risks and changeable levers updated.
 
     Formula (documented for the demo; not a clinical model):
         BMI = kg / m^2
-        short = clip(base_short + 0.025 * dBMI, 0.02, 0.95)
-        long  = clip(base_long  + 0.035 * dBMI, 0.03, 0.97)
-        BMI bar grows/shrinks by 0.045 * dBMI; waist tracks 0.7 cm per kg.
+        short = clip(base_short + 0.025 * dBMI + lifestyle_short + 0.004 * extra_cm, 0.02, 0.95)
+        long  = clip(base_long  + 0.035 * dBMI + lifestyle_long  + 0.006 * extra_cm, 0.03, 0.97)
+        extra_cm = waist_user - (waist0 + 0.7 * dkg)  # 0 when taille only follows gewicht
+        lifestyle: see lifestyle_risk_delta
+        BMI bar grows/shrinks by 0.045 * dBMI; waist bar by 0.012 * dcm.
     """
     updated = copy.deepcopy(payload)
     body = persona_body(payload)
@@ -347,21 +519,52 @@ def apply_weight_whatif(
     new_bmi = clip(new_bmi, 15.0, 55.0)
     delta_bmi = new_bmi - body["bmi"]
     delta_kg = new_weight - body["weight_kg"]
+    tracked_waist = clip(body["waist_cm"] + WAIST_CM_PER_KG * delta_kg, 50.0, 180.0)
+    if waist_cm is None:
+        new_waist = tracked_waist
+    else:
+        new_waist = clip(float(waist_cm), 50.0, 180.0)
+    extra_waist = new_waist - tracked_waist
+    new_move = clip(
+        float(move_min_week if move_min_week is not None else body["move_min_week"]),
+        0.0,
+        420.0,
+    )
+    new_sleep = clip(
+        float(sleep_hours if sleep_hours is not None else body["sleep_hours"]),
+        4.0,
+        10.0,
+    )
+    new_drinks = clip(
+        float(
+            sugary_drinks_week
+            if sugary_drinks_week is not None
+            else body["sugary_drinks_week"]
+        ),
+        0.0,
+        21.0,
+    )
+    life_short, life_long = lifestyle_risk_delta(
+        body,
+        move_min_week=new_move,
+        sleep_hours=new_sleep,
+        sugary_drinks_week=new_drinks,
+    )
 
     for risk in updated.get("risks") or []:
         base = float(risk["risk_score"])
         coef = SHORT_TERM_BMI_COEF if risk.get("id") == "t1_t2" else LONG_TERM_BMI_COEF
-        lo, hi = (0.02, 0.95) if risk.get("id") == "t1_t2" else (0.03, 0.97)
-        score = clip(base + coef * delta_bmi, lo, hi)
+        waist_coef = (
+            WAIST_EXTRA_SHORT_COEF if risk.get("id") == "t1_t2" else WAIST_EXTRA_LONG_COEF
+        )
+        extra = (life_short if risk.get("id") == "t1_t2" else life_long) + waist_coef * extra_waist
+        lo, hi = _risk_clip_range(risk.get("id"))
+        score = clip(base + coef * delta_bmi + extra, lo, hi)
         copy_bits = PATIENT_RISK_COPY.get(risk.get("id"), {})
         risk["risk_score"] = round(score, 4)
         risk["risk_label"] = risk_band(score)
         risk["horizon"] = copy_bits.get("title", risk.get("horizon"))
         risk["label"] = copy_bits.get("subtitle", risk.get("label"))
-
-    new_waist = None
-    if body["waist_cm"] == body["waist_cm"]:  # not NaN
-        new_waist = clip(body["waist_cm"] + WAIST_CM_PER_KG * delta_kg, 50.0, 180.0)
 
     for factor in updated.get("top_factors") or []:
         fid = factor.get("id")
@@ -380,30 +583,120 @@ def apply_weight_whatif(
                 factor["patient_value"] = f"{new_weight:.1f}"
                 factor["unit"] = "kg"
             factor["note"] = "Mock what-if contribution — not a trained attribution."
-        elif fid == "waist" and new_waist is not None:
+        elif fid == "waist":
             d_waist = new_waist - body["waist_cm"]
             factor["importance"] = round(clip(base_imp + WAIST_FACTOR_COEF * d_waist, 0.04, 0.50), 4)
-            factor["direction"] = "increases_risk" if new_waist >= 88 else "decreases_risk"
+            factor["direction"] = (
+                "increases_risk" if new_waist >= WAIST_PIVOT_CM else "decreases_risk"
+            )
             factor["patient_value"] = f"{new_waist:.0f}"
             factor["unit"] = "cm"
-            factor["note"] = "Waist tracks weight in this mock (0.7 cm per kg)."
+            factor["note"] = (
+                "Mock what-if: taille is bewerkbaar; volgt anders 0,7 cm per kg."
+            )
+
+    _apply_lifestyle_factors(
+        updated.get("top_factors") or [],
+        body,
+        move_min_week=new_move,
+        sleep_hours=new_sleep,
+        sugary_drinks_week=new_drinks,
+    )
 
     patient = updated.setdefault("patient", {})
     snap = patient.setdefault("snapshot", {})
     snap["bmi"] = f"{new_bmi:.1f}"
     snap["weight"] = f"{new_weight:.1f} kg"
-    if new_waist is not None:
-        snap["waist"] = f"{new_waist:.0f} cm"
+    snap["waist"] = f"{new_waist:.0f} cm"
+    snap["move_min_week"] = f"{new_move:.0f}"
+    snap["sleep_hours"] = f"{new_sleep:.1f}"
+    snap["sugary_drinks_week"] = f"{new_drinks:.0f}"
     patient["weight_kg"] = round(new_weight, 1)
     patient["bmi"] = round(new_bmi, 1)
+    patient["waist_cm"] = round(new_waist, 0)
+    patient["move_min_week"] = round(new_move, 0)
+    patient["sleep_hours"] = round(new_sleep, 1)
+    patient["sugary_drinks_week"] = round(new_drinks, 0)
     updated["whatif"] = {
         "weight_kg": round(new_weight, 1),
         "bmi": round(new_bmi, 1),
         "height_cm": body["height_cm"],
+        "waist_cm": round(new_waist, 0),
+        "move_min_week": round(new_move, 0),
+        "sleep_hours": round(new_sleep, 1),
+        "sugary_drinks_week": round(new_drinks, 0),
         "delta_kg": round(delta_kg, 1),
         "delta_bmi": round(delta_bmi, 2),
-        "active": abs(delta_kg) >= 0.25,
+        "active": _whatif_is_active(
+            delta_kg=delta_kg,
+            waist_cm=new_waist,
+            waist0=body["waist_cm"],
+            move_min_week=new_move,
+            move0=body["move_min_week"],
+            sleep_hours=new_sleep,
+            sleep0=body["sleep_hours"],
+            sugary_drinks_week=new_drinks,
+            drinks0=body["sugary_drinks_week"],
+        ),
+        "mode": "mock",
     }
+    return updated
+
+
+def apply_lifestyle_overlay(
+    payload: dict[str, Any],
+    baseline: dict[str, Any],
+    *,
+    move_min_week: float,
+    sleep_hours: float,
+    sugary_drinks_week: float,
+) -> dict[str, Any]:
+    """Mock-overlay levers the live 22-col model has no column for.
+
+    Waist/weight should already be in `payload` (live BMI + BRI). This only adds
+    movement, sleep, and sugary-drink deltas — same formula as lifestyle_risk_delta.
+    """
+    updated = copy.deepcopy(payload)
+    body = persona_body(baseline)
+    new_move = clip(float(move_min_week), 0.0, 420.0)
+    new_sleep = clip(float(sleep_hours), 4.0, 10.0)
+    new_drinks = clip(float(sugary_drinks_week), 0.0, 21.0)
+    life_short, life_long = lifestyle_risk_delta(
+        body,
+        move_min_week=new_move,
+        sleep_hours=new_sleep,
+        sugary_drinks_week=new_drinks,
+    )
+    for risk in updated.get("risks") or []:
+        add = life_short if risk.get("id") == "t1_t2" else life_long
+        lo, hi = _risk_clip_range(risk.get("id"))
+        score = clip(float(risk.get("risk_score") or 0) + add, lo, hi)
+        risk["risk_score"] = round(score, 4)
+        risk["risk_label"] = risk_band(score)
+    _apply_lifestyle_factors(
+        updated.get("top_factors") or [],
+        body,
+        move_min_week=new_move,
+        sleep_hours=new_sleep,
+        sugary_drinks_week=new_drinks,
+    )
+    whatif = updated.setdefault("whatif", {})
+    whatif["move_min_week"] = round(new_move, 0)
+    whatif["sleep_hours"] = round(new_sleep, 1)
+    whatif["sugary_drinks_week"] = round(new_drinks, 0)
+    extras_on = _whatif_is_active(
+        delta_kg=0.0,
+        waist_cm=body["waist_cm"],
+        waist0=body["waist_cm"],
+        move_min_week=new_move,
+        move0=body["move_min_week"],
+        sleep_hours=new_sleep,
+        sleep0=body["sleep_hours"],
+        sugary_drinks_week=new_drinks,
+        drinks0=body["sugary_drinks_week"],
+    )
+    whatif["active"] = bool(whatif.get("active") or extras_on)
+    whatif["overlay"] = "mock_lifestyle"
     return updated
 
 
@@ -499,10 +792,22 @@ def build_session_context(payload: dict[str, Any]) -> str:
         for item in interventions_for_local_factors(payload, 3)
     ] or ["- (geen tegels)"]
     whatif = payload.get("whatif") or {}
-    weight = whatif.get("weight_kg", patient.get("weight_kg"))
-    bmi = whatif.get("bmi", patient.get("bmi"))
+    body = persona_body(payload)
+    weight = whatif.get("weight_kg", patient.get("weight_kg", body["weight_kg"]))
+    bmi = whatif.get("bmi", patient.get("bmi", body["bmi"]))
+    waist = whatif.get("waist_cm", patient.get("waist_cm", body["waist_cm"]))
+    move = whatif.get("move_min_week", patient.get("move_min_week", body["move_min_week"]))
+    sleep = whatif.get("sleep_hours", patient.get("sleep_hours", body["sleep_hours"]))
+    drinks = whatif.get(
+        "sugary_drinks_week",
+        patient.get("sugary_drinks_week", body["sugary_drinks_week"]),
+    )
     if weight is not None and bmi is not None:
-        whatif_line = f"What-if: {float(weight):.1f} kg · BMI {float(bmi):.1f}"
+        whatif_line = (
+            f"What-if: {float(weight):.1f} kg · BMI {float(bmi):.1f} · "
+            f"taille {float(waist):.0f} cm · {float(move):.0f} min/week · "
+            f"{float(sleep):.1f} uur slaap · {float(drinks):.0f} suikerdranken/week"
+        )
     else:
         whatif_line = "What-if: (geen gewicht)"
     disclaimer = payload.get("disclaimer") or "Demo-proxy, geen diagnose."

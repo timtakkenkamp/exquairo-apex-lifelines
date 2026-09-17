@@ -16,6 +16,7 @@ from buddy_lib import (
     SESSIE_CONTEXT_TOKEN,
     SYSTEM_PROMPT_FILE,
     answer_question,
+    apply_lifestyle_overlay,
     apply_weight_whatif,
     build_session_context,
     factor_direction_nl,
@@ -24,6 +25,7 @@ from buddy_lib import (
     load_payload,
     load_personas,
     optional_llm_reply,
+    persona_body,
     interventions_for_local_factors,
     pick_primary_intervention,
     render_system_prompt,
@@ -92,6 +94,79 @@ class WhatIfTests(unittest.TestCase):
         self.assertAlmostEqual(same["risks"][1]["risk_score"], 0.67, places=3)
         self.assertFalse(same["whatif"]["active"])
 
+    def test_lifestyle_levers_move_risk_intuitively(self):
+        river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")
+        body = persona_body(river)
+        self.assertEqual(body["move_min_week"], 30)
+        self.assertEqual(body["sleep_hours"], 5.5)
+        self.assertEqual(body["sugary_drinks_week"], 7)
+        self.assertEqual(body["waist_cm"], 106)
+        better = apply_weight_whatif(
+            river,
+            weight_kg=94.5,
+            move_min_week=150,
+            sleep_hours=8.0,
+            sugary_drinks_week=1,
+        )
+        worse = apply_weight_whatif(
+            river,
+            weight_kg=94.5,
+            move_min_week=0,
+            sleep_hours=4.5,
+            sugary_drinks_week=14,
+        )
+        base_short = river["risks"][0]["risk_score"]
+        base_long = river["risks"][1]["risk_score"]
+        self.assertLess(better["risks"][0]["risk_score"], base_short)
+        self.assertLess(better["risks"][1]["risk_score"], base_long)
+        self.assertGreater(worse["risks"][0]["risk_score"], base_short)
+        self.assertGreater(worse["risks"][1]["risk_score"], base_long)
+        sports = next(f for f in better["top_factors"] if f["id"] == "sports")
+        self.assertEqual(sports["direction"], "decreases_risk")
+        self.assertIn("150", str(sports["patient_value"]))
+
+    def test_waist_override_and_reset_all_levers(self):
+        river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")
+        body = persona_body(river)
+        tighter = apply_weight_whatif(river, weight_kg=94.5, waist_cm=96)
+        looser = apply_weight_whatif(river, weight_kg=94.5, waist_cm=116)
+        self.assertLess(tighter["risks"][0]["risk_score"], river["risks"][0]["risk_score"])
+        self.assertGreater(looser["risks"][0]["risk_score"], river["risks"][0]["risk_score"])
+        waist = next(f for f in tighter["top_factors"] if f["id"] == "waist")
+        self.assertEqual(float(waist["patient_value"]), 96)
+        reset = apply_weight_whatif(
+            river,
+            weight_kg=body["weight_kg"],
+            waist_cm=body["waist_cm"],
+            move_min_week=body["move_min_week"],
+            sleep_hours=body["sleep_hours"],
+            sugary_drinks_week=body["sugary_drinks_week"],
+        )
+        self.assertFalse(reset["whatif"]["active"])
+        self.assertAlmostEqual(reset["risks"][0]["risk_score"], 0.48, places=3)
+        self.assertAlmostEqual(reset["risks"][1]["risk_score"], 0.67, places=3)
+        noor = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-noor")
+        sam = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-sam")
+        self.assertGreater(persona_body(noor)["move_min_week"], persona_body(river)["move_min_week"])
+        self.assertLess(
+            persona_body(noor)["sugary_drinks_week"],
+            persona_body(sam)["sugary_drinks_week"],
+        )
+
+    def test_lifestyle_overlay_leaves_weight_math_to_caller(self):
+        river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")
+        seeded = apply_weight_whatif(river, weight_kg=94.5)
+        over = apply_lifestyle_overlay(
+            seeded,
+            river,
+            move_min_week=150,
+            sleep_hours=8.0,
+            sugary_drinks_week=1,
+        )
+        self.assertLess(over["risks"][0]["risk_score"], seeded["risks"][0]["risk_score"])
+        self.assertTrue(over["whatif"]["active"])
+        self.assertEqual(over["whatif"]["overlay"], "mock_lifestyle")
+
 
 class InterventionPageTests(unittest.TestCase):
     def test_movement_page_is_a_groningen_walk(self):
@@ -143,6 +218,13 @@ class SimplifyTests(unittest.TestCase):
         self.assertIn("audience_persona_pills", app)
         self.assertIn("buddy-whatif-flag", app)
         self.assertIn("format_factor_value", app)
+        self.assertIn("Taille (cm)", app)
+        self.assertIn("Beweegminuten per week", app)
+        self.assertIn("Slaap (uur per nacht)", app)
+        self.assertIn("Suikerdranken per week", app)
+        self.assertIn("whatif_reset", app)
+        self.assertNotIn('"Lengte"', app)
+        self.assertNotIn("Lengte (cm)", app)
         css = (EXAMPLE_CONTRACT.parent / "styles.css").read_text(encoding="utf-8")
         self.assertIn("align-items: stretch", css)
         self.assertIn("buddy-tile-blurb", css)
@@ -208,7 +290,13 @@ class FinalModelOverlayTests(unittest.TestCase):
             self.skipTest("final A/B joblibs not on disk")
         for payload in load_personas():
             live = overlay_live_predictions(payload)
+            body = persona_body(payload)
+            live_waist = overlay_live_predictions(
+                payload, waist_cm=body["waist_cm"] + 8
+            )
             self.assertEqual(live["source"], "live_final_models")
+            self.assertEqual(live_waist["source"], "live_final_models")
+            self.assertIsNotNone((live_waist.get("whatif") or {}).get("waist_cm"))
             self.assertTrue(live["live_model"]["model_a"].endswith("run1_final.joblib"))
             self.assertTrue(live["live_model"]["model_b"].endswith("run1_final.joblib"))
             self.assertEqual(len(live["risks"]), 2)
@@ -342,6 +430,34 @@ class SystemPromptTests(unittest.TestCase):
         self.assertIn("Kleine stappen. Grote impact.", blob)
         self.assertNotIn("Small steps. Big impact.", blob)
         self.assertNotIn("<strong>Hoe:</strong>", blob)
+        slider_labels = [s.label for s in demo.slider]
+        self.assertIn("Gewicht (kg)", slider_labels)
+        self.assertIn("Taille (cm)", slider_labels)
+        self.assertIn("Beweegminuten per week", slider_labels)
+        self.assertIn("Slaap (uur per nacht)", slider_labels)
+        self.assertIn("Suikerdranken per week", slider_labels)
+        self.assertFalse(any("lengte" in (label or "").lower() for label in slider_labels))
+        self.assertTrue(any(b.label == "Reset" for b in demo.button))
+        for slider in demo.slider:
+            if slider.label == "Beweegminuten per week":
+                slider.set_value(200)
+            elif slider.label == "Suikerdranken per week":
+                slider.set_value(14)
+            elif slider.label == "Taille (cm)":
+                slider.set_value(120.0)
+            elif slider.label == "Slaap (uur per nacht)":
+                slider.set_value(8.0)
+        demo.run()
+        moved = {s.label: s.value for s in demo.slider}
+        self.assertEqual(moved["Beweegminuten per week"], 200)
+        reset = next(b for b in demo.button if b.label == "Reset")
+        reset.click().run()
+        restored = {s.label: s.value for s in demo.slider}
+        self.assertEqual(restored["Beweegminuten per week"], 30)
+        self.assertEqual(restored["Suikerdranken per week"], 7)
+        self.assertEqual(restored["Taille (cm)"], 106)
+        self.assertEqual(restored["Slaap (uur per nacht)"], 5.5)
+        self.assertIn("Hoi Pietje", [t.value for t in demo.title])
 
     def test_empty_question_matches_chat_copy(self):
         river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")

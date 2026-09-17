@@ -11,8 +11,11 @@ from buddy_lib import (
     CHAT_PLACEHOLDER,
     OPENAI_MODEL,
     THEME_META,
+    WAIST_CM_PER_KG,
     answer_question,
+    apply_lifestyle_overlay,
     apply_weight_whatif,
+    clip,
     factor_direction_nl,
     factor_display_label,
     load_default_system_prompt,
@@ -279,14 +282,33 @@ def render_detail_page(theme: str, patient_name: str, payload: dict) -> None:
         st.info(page["tip"])
 
 
+def _nudge_waist_with_weight(old_weight: float, new_weight: float) -> None:
+    """Keep taille visible and aligned with the 0.7 cm/kg mock track when gewicht moves."""
+    if "whatif_waist" not in st.session_state:
+        return
+    delta = float(new_weight) - float(old_weight)
+    if abs(delta) < 1e-9:
+        return
+    waist = float(st.session_state.whatif_waist)
+    st.session_state.whatif_waist = round(clip(waist + WAIST_CM_PER_KG * delta, 60.0, 140.0), 0)
+
+
 def _sync_weight_to_bmi() -> None:
     height_m = float(st.session_state.get("whatif_height_cm") or 170) / 100.0
-    st.session_state.whatif_bmi = round(float(st.session_state.whatif_weight) / (height_m**2), 1)
+    new_weight = float(st.session_state.whatif_weight)
+    old_weight = float(st.session_state.get("_whatif_weight_for_waist") or new_weight)
+    st.session_state.whatif_bmi = round(new_weight / (height_m**2), 1)
+    _nudge_waist_with_weight(old_weight, new_weight)
+    st.session_state._whatif_weight_for_waist = new_weight
 
 
 def _sync_bmi_to_weight() -> None:
     height_m = float(st.session_state.get("whatif_height_cm") or 170) / 100.0
-    st.session_state.whatif_weight = round(float(st.session_state.whatif_bmi) * (height_m**2), 1)
+    new_weight = round(float(st.session_state.whatif_bmi) * (height_m**2), 1)
+    old_weight = float(st.session_state.get("_whatif_weight_for_waist") or new_weight)
+    st.session_state.whatif_weight = new_weight
+    _nudge_waist_with_weight(old_weight, new_weight)
+    st.session_state._whatif_weight_for_waist = new_weight
 
 
 def _secrets_openai_key() -> str:
@@ -299,17 +321,54 @@ def _secrets_openai_key() -> str:
 def apply_persona_state(persona_id: str, baseline: dict) -> None:
     body = persona_body(baseline)
     st.session_state.whatif_height_cm = body["height_cm"]
+    defaults = {
+        "whatif_weight": round(body["weight_kg"], 1),
+        "whatif_bmi": round(body["bmi"], 1),
+        "whatif_waist": round(body["waist_cm"], 0),
+        "whatif_move": int(round(body["move_min_week"])),
+        "whatif_sleep": round(body["sleep_hours"], 1),
+        "whatif_drinks": int(round(body["sugary_drinks_week"])),
+        "_whatif_weight_for_waist": round(body["weight_kg"], 1),
+    }
     persona_changed = st.session_state.get("whatif_persona") != persona_id
     resetting = st.session_state.pop("whatif_reset", False)
     if persona_changed or resetting:
         st.session_state.whatif_persona = persona_id
-        st.session_state.whatif_weight = round(body["weight_kg"], 1)
-        st.session_state.whatif_bmi = round(body["bmi"], 1)
+        for key, value in defaults.items():
+            st.session_state[key] = value
+    else:
+        for key, value in defaults.items():
+            st.session_state.setdefault(key, value)
     if persona_changed:
         st.session_state.chat = []
         st.session_state.chat_persona = persona_id
         st.session_state.buddy_view = "home"
         st.session_state.detail_theme = None
+
+
+def payload_from_whatif(baseline: dict, use_live: bool) -> dict:
+    weight_kg = float(st.session_state.whatif_weight)
+    waist_cm = float(st.session_state.whatif_waist)
+    move_min = float(st.session_state.whatif_move)
+    sleep_h = float(st.session_state.whatif_sleep)
+    drinks = float(st.session_state.whatif_drinks)
+    if use_live:
+        live = overlay_live_predictions(baseline, weight_kg=weight_kg, waist_cm=waist_cm)
+        return apply_lifestyle_overlay(
+            live,
+            baseline,
+            move_min_week=move_min,
+            sleep_hours=sleep_h,
+            sugary_drinks_week=drinks,
+        )
+    return apply_weight_whatif(
+        baseline,
+        weight_kg=weight_kg,
+        waist_cm=waist_cm,
+        move_min_week=move_min,
+        sleep_hours=sleep_h,
+        sugary_drinks_week=drinks,
+    )
 
 
 payloads = personas()
@@ -379,14 +438,7 @@ openai_key = resolve_openai_api_key(
     _secrets_openai_key(),
 )
 
-if use_live:
-    payload = overlay_live_predictions(
-        baseline, weight_kg=float(st.session_state.whatif_weight)
-    )
-else:
-    payload = apply_weight_whatif(
-        baseline, weight_kg=float(st.session_state.whatif_weight)
-    )
+payload = payload_from_whatif(baseline, use_live)
 patient = payload["patient"]
 
 if st.session_state.get("buddy_view") == "detail":
@@ -417,7 +469,7 @@ if AUDIENCE:
 st.subheader("1. Je risico")
 st.markdown('<div class="buddy-whatif-flag" aria-hidden="true"></div>', unsafe_allow_html=True)
 with st.container(border=True):
-    st.caption("Wat als je gewicht verandert?")
+    st.caption("Wat als je gewicht of leefstijl verandert?")
     wcol, bcol, rcol = st.columns([3, 2, 1.05], vertical_alignment="bottom")
     with wcol:
         st.slider(
@@ -441,19 +493,55 @@ with st.container(border=True):
         if st.button("Reset", use_container_width=True):
             st.session_state.whatif_reset = True
             st.rerun()
+    tcol, mcol, scol, dcol = st.columns(4, vertical_alignment="bottom")
+    with tcol:
+        st.slider(
+            "Taille (cm)",
+            60.0,
+            140.0,
+            step=1.0,
+            key="whatif_waist",
+            help="Middelomtrek — zelf meetbaar.",
+        )
+    with mcol:
+        st.slider(
+            "Beweegminuten per week",
+            0,
+            420,
+            step=10,
+            key="whatif_move",
+            help="Wandelen, fietsen, sport.",
+        )
+    with scol:
+        st.slider(
+            "Slaap (uur per nacht)",
+            4.0,
+            10.0,
+            step=0.5,
+            key="whatif_sleep",
+            help="Gemiddeld, niet perfect.",
+        )
+    with dcol:
+        st.slider(
+            "Suikerdranken per week",
+            0,
+            21,
+            step=1,
+            key="whatif_drinks",
+            help="Frisdrank, sap, energiedrank.",
+        )
 
-if use_live:
-    payload = overlay_live_predictions(
-        baseline, weight_kg=float(st.session_state.whatif_weight)
-    )
-else:
-    payload = apply_weight_whatif(
-        baseline, weight_kg=float(st.session_state.whatif_weight)
-    )
+payload = payload_from_whatif(baseline, use_live)
 patient = payload["patient"]
 whatif = payload.get("whatif") or {}
 if whatif.get("active"):
-    st.caption(f"Nu {whatif['weight_kg']:.1f} kg · BMI {whatif['bmi']:.1f}.")
+    st.caption(
+        f"Nu {whatif['weight_kg']:.1f} kg · BMI {whatif['bmi']:.1f} · "
+        f"taille {float(whatif.get('waist_cm') or 0):.0f} cm · "
+        f"{float(whatif.get('move_min_week') or 0):.0f} min · "
+        f"{float(whatif.get('sleep_hours') or 0):.1f} uur slaap · "
+        f"{float(whatif.get('sugary_drinks_week') or 0):.0f} suikerdranken."
+    )
 
 c1, c2 = st.columns(2)
 risks = {r["id"]: r for r in payload["risks"]}

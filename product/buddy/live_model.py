@@ -68,16 +68,20 @@ def features_with_weight(
     *,
     weight_kg: float,
     height_cm: float,
+    waist_cm: float | None = None,
 ) -> dict[str, Any]:
-    """Adjust BMI (and waist roughly) when the user moves the weight slider."""
+    """Adjust BMI (and waist / BRI) when the user moves gewicht or taille."""
     feats = dict(base_features)
     height_m = max(height_cm, 100.0) / 100.0
     old_bmi = float(feats.get("BMI_T1") or 25.0)
     new_bmi = weight_kg / (height_m**2)
     feats["BMI_T1"] = round(new_bmi, 2)
     feats["HEIGHT_T1"] = height_cm
-    # Keep waist coherent with weight change (~0.7 cm per kg), same heuristic as mock what-if
-    if feats.get("WAIST_T1") is not None:
+    if waist_cm is not None:
+        feats["WAIST_T1"] = float(waist_cm)
+        feats["BRI_T1"] = body_roundness_index(float(waist_cm), height_cm)
+    elif feats.get("WAIST_T1") is not None:
+        # Keep waist coherent with weight change (~0.7 cm per kg), same heuristic as mock what-if
         old_weight = old_bmi * height_m**2
         delta_kg = weight_kg - old_weight
         feats["WAIST_T1"] = float(feats["WAIST_T1"]) + 0.7 * delta_kg
@@ -89,6 +93,7 @@ def overlay_live_predictions(
     payload: dict[str, Any],
     *,
     weight_kg: float | None = None,
+    waist_cm: float | None = None,
 ) -> dict[str, Any]:
     """Return payload copy with risks/top_factors from live models."""
     updated = copy.deepcopy(payload)
@@ -100,7 +105,9 @@ def overlay_live_predictions(
     base = load_feature_snapshot(persona_id)
     height_cm = float(patient.get("height_cm") or 170)
     body_weight = float(weight_kg if weight_kg is not None else patient.get("weight_kg") or 75)
-    feats = features_with_weight(base, weight_kg=body_weight, height_cm=height_cm)
+    feats = features_with_weight(
+        base, weight_kg=body_weight, height_cm=height_cm, waist_cm=waist_cm
+    )
 
     pred = predict_diabetes_risks(feats, top_k=5)
     p_short = float(pred["risk_t1_t2"])
@@ -156,13 +163,22 @@ def overlay_live_predictions(
 
     base_bmi = float(base.get("BMI_T1") or new_bmi)
     base_weight = base_bmi * height_m**2
+    live_waist = None
+    if feats.get("WAIST_T1") is not None:
+        live_waist = float(feats["WAIST_T1"])
     updated["whatif"] = {
         "weight_kg": round(body_weight, 1),
         "bmi": round(new_bmi, 1),
         "height_cm": height_cm,
+        "waist_cm": round(live_waist, 0) if live_waist is not None else None,
         "delta_kg": round(body_weight - base_weight, 1),
         "delta_bmi": round(new_bmi - base_bmi, 2),
-        "active": abs(body_weight - base_weight) >= 0.25,
+        "active": abs(body_weight - base_weight) >= 0.25
+        or (
+            waist_cm is not None
+            and live_waist is not None
+            and abs(live_waist - float(base.get("WAIST_T1") or live_waist)) >= 0.5
+        ),
         "mode": "live_model",
     }
     updated["live_model"] = {
