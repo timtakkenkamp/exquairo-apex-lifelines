@@ -10,9 +10,13 @@
     "pronouns": "she/her",
     "tagline": "A maintenance chapter — keep what works.",
     "story": "Late 30s, active, BMI in a lower range, no family T2DM flags, HbA1c well below the mock threshold.",
+    "height_cm": 168,
+    "weight_kg": 66.0,
+    "bmi": 23.4,
     "snapshot": {
       "hba1c_t1": "5.3%",
       "bmi": "23.4",
+      "weight": "66.0 kg",
       "sports": "regular",
       "smoking": "no",
       "sleep": "ok"
@@ -27,15 +31,15 @@
   "risks": [
     {
       "id": "t1_t2",
-      "horizon": "T1→T2",
-      "label": "First visit to second visit",
+      "horizon": "Korte-termijn risico op diabetes",
+      "label": "Demo-proxy: kans dat HbA1c boven 6,5% uitkomt. Geen diagnose.",
       "risk_score": 0.08,
       "risk_label": "low"
     },
     {
       "id": "t1_t3",
-      "horizon": "T1→T3",
-      "label": "First visit to third visit",
+      "horizon": "Lange-termijn risico op diabetes",
+      "label": "Demo-proxy: kans dat HbA1c boven 6,5% uitkomt. Geen diagnose.",
       "risk_score": 0.13,
       "risk_label": "low"
     }
@@ -111,6 +115,6 @@
     }
   ],
   "coaching": {
-    "template": "Noor, both horizons stay low in this demo — that is a picture to maintain, not overhaul. Your activity and weight are working for you. Keep the routines you already like, and tidy busy-day meals so they do not quietly drift."
+    "template": "Noor, both the short- and long-term diabetes pictures stay low in this demo — maintain, do not overhaul. Your activity and weight are working for you. Keep the routines you already like, and tidy busy-day meals so they do not quietly drift."
   }
 }

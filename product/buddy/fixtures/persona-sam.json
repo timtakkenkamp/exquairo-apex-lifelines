@@ -10,9 +10,13 @@
     "pronouns": "he/him",
     "tagline": "Already moving — a few habits to tidy.",
     "story": "Early 40s, BMI in the mid-20s, cycles to work some days, smokes occasionally, drinks more than a ‘none’ pattern.",
+    "height_cm": 178,
+    "weight_kg": 82.7,
+    "bmi": 26.1,
     "snapshot": {
       "hba1c_t1": "5.8%",
       "bmi": "26.1",
+      "weight": "82.7 kg",
       "cycle_commute": "some days",
       "smoking": "occasional",
       "alcohol": "above none"
@@ -27,15 +31,15 @@
   "risks": [
     {
       "id": "t1_t2",
-      "horizon": "T1→T2",
-      "label": "First visit to second visit",
+      "horizon": "Korte-termijn risico op diabetes",
+      "label": "Demo-proxy: kans dat HbA1c boven 6,5% uitkomt. Geen diagnose.",
       "risk_score": 0.27,
       "risk_label": "medium"
     },
     {
       "id": "t1_t3",
-      "horizon": "T1→T3",
-      "label": "First visit to third visit",
+      "horizon": "Lange-termijn risico op diabetes",
+      "label": "Demo-proxy: kans dat HbA1c boven 6,5% uitkomt. Geen diagnose.",
       "risk_score": 0.38,
       "risk_label": "medium"
     }
@@ -111,6 +115,6 @@
     }
   ],
   "coaching": {
-    "template": "Sam, you already have a movement habit working for you. The T1→T2 and T1→T3 pictures sit in a mid range, with smoking and alcohol as the local extras. Nudge those two, keep the bike — that is a strong, doable combo."
+    "template": "Sam, you already have a movement habit working for you. Short- and long-term diabetes risk sit in a mid range here, with smoking and alcohol as the local extras. Nudge those two, keep the bike — that is a strong, doable combo."
   }
 }

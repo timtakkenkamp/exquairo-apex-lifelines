@@ -7,7 +7,9 @@ import unittest
 from buddy_lib import (
     DEFLECT_MESSAGE,
     EXAMPLE_CONTRACT,
+    PATIENT_RISK_COPY,
     answer_question,
+    apply_weight_whatif,
     is_medical_or_triage,
     load_payload,
     load_personas,
@@ -36,6 +38,41 @@ class FixtureTests(unittest.TestCase):
         self.assertNotEqual(sam_top, noor_top)
         self.assertEqual(by_id["persona-river"]["risks"][1]["risk_label"], "high")
         self.assertEqual(by_id["persona-noor"]["risks"][0]["risk_label"], "low")
+
+
+class WhatIfTests(unittest.TestCase):
+    def test_heavier_weight_raises_risks_and_bmi_bar(self):
+        river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")
+        heavier = apply_weight_whatif(river, weight_kg=104.5)
+        lighter = apply_weight_whatif(river, weight_kg=84.5)
+        base_short = river["risks"][0]["risk_score"]
+        base_long = river["risks"][1]["risk_score"]
+        self.assertGreater(heavier["risks"][0]["risk_score"], base_short)
+        self.assertGreater(heavier["risks"][1]["risk_score"], base_long)
+        self.assertLess(lighter["risks"][0]["risk_score"], base_short)
+        self.assertLess(lighter["risks"][1]["risk_score"], base_long)
+        # Long-term coefficient is larger, so the long card moves more.
+        self.assertGreater(
+            heavier["risks"][1]["risk_score"] - base_long,
+            heavier["risks"][0]["risk_score"] - base_short,
+        )
+        base_bmi = next(f for f in river["top_factors"] if f["id"] == "bmi")
+        heavy_bmi = next(f for f in heavier["top_factors"] if f["id"] == "bmi")
+        light_bmi = next(f for f in lighter["top_factors"] if f["id"] == "bmi")
+        self.assertGreater(heavy_bmi["importance"], base_bmi["importance"])
+        self.assertLess(light_bmi["importance"], base_bmi["importance"])
+        base_waist = next(f for f in river["top_factors"] if f["id"] == "waist")
+        heavy_waist = next(f for f in heavier["top_factors"] if f["id"] == "waist")
+        self.assertGreater(float(heavy_waist["patient_value"]), float(base_waist["patient_value"]))
+        self.assertEqual(heavier["risks"][0]["horizon"], PATIENT_RISK_COPY["t1_t2"]["title"])
+        self.assertEqual(heavier["risks"][1]["horizon"], PATIENT_RISK_COPY["t1_t3"]["title"])
+
+    def test_reset_weight_matches_baseline(self):
+        river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")
+        same = apply_weight_whatif(river, weight_kg=94.5)
+        self.assertAlmostEqual(same["risks"][0]["risk_score"], 0.48, places=3)
+        self.assertAlmostEqual(same["risks"][1]["risk_score"], 0.67, places=3)
+        self.assertFalse(same["whatif"]["active"])
 
 
 class GuardrailTests(unittest.TestCase):

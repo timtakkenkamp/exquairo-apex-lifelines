@@ -7,11 +7,14 @@ from pathlib import Path
 import streamlit as st
 
 from buddy_lib import (
+    PATIENT_RISK_COPY,
     THEME_META,
     answer_question,
+    apply_weight_whatif,
     factor_share,
     load_personas,
     pct,
+    persona_body,
     validate_payload,
 )
 
@@ -32,7 +35,7 @@ RISK_COLORS = {
 }
 
 st.set_page_config(
-    page_title="Buddy · HbA1c lifestyle companion",
+    page_title="Buddy · diabetes risico (demo)",
     page_icon="🌿",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -63,14 +66,16 @@ def render_risk(risk: dict) -> None:
     colors = RISK_COLORS[label]
     score_pct = pct(risk["risk_score"])
     width = max(4, round(float(risk["risk_score"]) * 100))
+    copy_bits = PATIENT_RISK_COPY.get(risk["id"], {})
+    title = copy_bits.get("title") or risk.get("horizon")
+    subtitle = copy_bits.get("subtitle") or risk.get("label")
     st.markdown(
         f"""
 <div style="background:#fffdf8;border:1px solid #e4ddd0;border-radius:18px;padding:18px 18px 16px;box-shadow:0 8px 24px rgba(28,42,37,0.04);">
-  <div style="font-weight:700;font-size:1.05rem;color:#1c2a25;">{risk["horizon"]}</div>
-  <div style="color:#5c6b64;font-size:0.86rem;margin:0 0 8px 0;">{risk["label"]}</div>
+  <div style="font-weight:700;font-size:1.12rem;color:#1c2a25;line-height:1.25;">{title}</div>
+  <div style="color:#5c6b64;font-size:0.86rem;margin:6px 0 8px 0;">{subtitle}</div>
   <div style="font-size:3rem;font-weight:750;letter-spacing:-0.03em;line-height:1;color:{colors["ink"]};">{score_pct}</div>
   <span style="display:inline-block;margin-top:8px;border-radius:999px;padding:3px 10px;font-size:0.75rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;background:{colors["badge_bg"]};color:{colors["badge_ink"]};">{label}</span>
-  <div style="margin-top:10px;color:#5c6b64;font-size:0.9rem;">Chance HbA1c will be <strong>above 6.5%</strong> (&gt; 6.5%)</div>
   <div style="margin-top:12px;height:8px;background:#eee7da;border-radius:999px;overflow:hidden;">
     <div style="width:{width}%;height:8px;background:{colors["bar"]};border-radius:999px;"></div>
   </div>
@@ -126,52 +131,133 @@ def render_intervention(item: dict, factor_labels: dict[str, str]) -> None:
     )
 
 
+def _sync_weight_to_bmi() -> None:
+    height_m = float(st.session_state.get("whatif_height_cm") or 170) / 100.0
+    weight = float(st.session_state.whatif_weight)
+    st.session_state.whatif_bmi = round(weight / (height_m**2), 1)
+
+
+def _sync_bmi_to_weight() -> None:
+    height_m = float(st.session_state.get("whatif_height_cm") or 170) / 100.0
+    bmi = float(st.session_state.whatif_bmi)
+    st.session_state.whatif_weight = round(bmi * (height_m**2), 1)
+
+
 payloads = personas()
 by_id = {p["patient"]["persona_id"]: p for p in payloads}
 
 with st.sidebar:
     st.markdown("### Demo patient")
-    st.caption("Switcher for the 15:00 walkthrough. These are fictional personas, not real people.")
+    st.caption("Switcher for the walkthrough. These are fictional personas, not real people.")
     persona_id = st.radio(
         "Who are we coaching?",
         options=list(by_id),
         format_func=lambda pid: (
             f"{by_id[pid]['patient']['display_name']} · "
-            f"{by_id[pid]['risks'][1]['risk_label']} T1→T3"
+            f"{by_id[pid]['risks'][1]['risk_label']} lange termijn"
         ),
     )
-    payload = by_id[persona_id]
-    patient = payload["patient"]
+    baseline = by_id[persona_id]
+    body = persona_body(baseline)
+    st.session_state.whatif_height_cm = body["height_cm"]
+    if st.session_state.get("whatif_persona") != persona_id:
+        st.session_state.whatif_persona = persona_id
+        st.session_state.whatif_weight = round(body["weight_kg"], 1)
+        st.session_state.whatif_bmi = round(body["bmi"], 1)
+        st.session_state.chat = []
+        st.session_state.chat_persona = persona_id
+
+    patient = baseline["patient"]
     st.markdown(f"**{patient['display_name']}**, {patient.get('age', '—')}")
     st.caption(patient.get("tagline", ""))
     st.write(patient.get("story", ""))
-    snap = patient.get("snapshot") or {}
-    if snap:
-        st.markdown("**Snapshot (mock inputs)**")
-        for key, value in snap.items():
-            st.write(f"{key.replace('_', ' ')}: `{value}`")
+    st.caption(
+        f"Demo length: {body['height_cm']:.0f} cm · start {body['weight_kg']:.1f} kg · "
+        f"BMI {body['bmi']:.1f}"
+    )
     st.divider()
     st.caption("Mock JSON → later a colleagues’ model API with the same contract.")
     st.caption(
         "Source: `"
-        + payload.get("source", "mock")
+        + baseline.get("source", "mock")
         + "` · schema "
-        + payload.get("schema_version", "?")
+        + baseline.get("schema_version", "?")
     )
+
+payload = apply_weight_whatif(
+    baseline,
+    weight_kg=float(st.session_state.whatif_weight),
+)
+patient = payload["patient"]
+whatif = payload.get("whatif") or {}
 
 st.caption("ELECTRONIC BUDDY · MOCK DEMO")
 st.title(f"Hi {patient['display_name']} — here is your lifestyle picture")
 st.write(
-    "Two horizons for the chance HbA1c will be **above 6.5%** (> 6.5%), "
+    "Two pictures: **korte-termijn** and **lange-termijn risico op diabetes**, "
     "plus the factors that matter *for you* (not a global leaderboard)."
 )
 st.info(
     "Coaching companion for a product demo. Not a diagnosis, not triage, "
-    "not a prescription. Medical questions belong with a care provider."
+    "not a prescription. Medical questions belong with a care provider. "
+    "Underlying mock proxy remains HbA1c above 6.5%."
 )
 
+st.subheader("Wat als je gewicht verandert?")
+st.caption(
+    "Pas gewicht of BMI aan. De demo herberekent korte- en lange-termijn risico "
+    "en de lokale bijdrage van gewicht/BMI (en taille als die meedoet). "
+    "Eenvoudige rekenregel, geen model en geen medisch advies."
+)
+wcol, bcol, rcol = st.columns([3, 2, 1])
+with wcol:
+    st.slider(
+        "Gewicht (kg)",
+        min_value=45.0,
+        max_value=140.0,
+        step=0.5,
+        key="whatif_weight",
+        on_change=_sync_weight_to_bmi,
+    )
+with bcol:
+    st.number_input(
+        "BMI",
+        min_value=16.0,
+        max_value=50.0,
+        step=0.1,
+        key="whatif_bmi",
+        on_change=_sync_bmi_to_weight,
+    )
+with rcol:
+    st.write("")
+    if st.button("Reset", help="Terug naar het startgewicht van deze persona"):
+        st.session_state.whatif_weight = round(body["weight_kg"], 1)
+        st.session_state.whatif_bmi = round(body["bmi"], 1)
+        st.rerun()
+
+if whatif.get("active"):
+    direction = "omhoog" if whatif["delta_kg"] > 0 else "omlaag"
+    st.caption(
+        f"Nu {whatif['weight_kg']:.1f} kg · BMI {whatif['bmi']:.1f} "
+        f"({direction} {abs(whatif['delta_kg']):.1f} kg t.o.v. start). "
+        f"Lengte in deze demo blijft {whatif['height_cm']:.0f} cm."
+    )
+else:
+    st.caption(
+        f"Startwaarden: {body['weight_kg']:.1f} kg · BMI {body['bmi']:.1f} · "
+        f"lengte {body['height_cm']:.0f} cm (BMI = kg / m²)."
+    )
+
+# Re-apply after slider callbacks so the visible numbers match the widgets.
+payload = apply_weight_whatif(baseline, weight_kg=float(st.session_state.whatif_weight))
+whatif = payload.get("whatif") or {}
+patient = payload["patient"]
+
 st.subheader("Your two risk pictures")
-st.caption("T1 is the first visit. T2 and T3 are later visits. Percentages are mocked for this demo.")
+st.caption(
+    "Patient-facing titles are short- and long-term diabetes risk. "
+    "The mock underneath is still an HbA1c > 6.5% proxy."
+)
 c1, c2 = st.columns(2)
 risks = {r["id"]: r for r in payload["risks"]}
 with c1:
@@ -181,7 +267,8 @@ with c2:
 
 st.subheader("What is shaping your picture")
 st.caption(
-    "Local importance for this persona only. Bar length is this person’s mix, not a team-wide ranking."
+    "Local importance for this persona — bars move when you change weight. "
+    "Not a team-wide ranking and not a trained attribution."
 )
 for factor in factor_share(payload["top_factors"]):
     render_factor(factor)
@@ -199,6 +286,18 @@ for col, item in zip(ix_cols, payload["interventions"]):
 
 st.subheader("A note from your buddy")
 note = (payload.get("coaching") or {}).get("template", "")
+if whatif.get("active"):
+    if whatif["delta_kg"] < 0:
+        extra = (
+            f" At {whatif['weight_kg']:.0f} kg the mock picture eases a little — "
+            "useful as a lifestyle lever, not a prescription."
+        )
+    else:
+        extra = (
+            f" At {whatif['weight_kg']:.0f} kg the mock picture tightens a little. "
+            "Small, repeatable food and movement steps matter more than a perfect plan."
+        )
+    note = f"{note}{extra}"
 st.markdown(
     f"""
 <div style="background:#fffdf8;border:1px solid #e4ddd0;border-left:7px solid #2a8fb8;border-radius:16px;padding:16px 18px;color:#1c2a25;">

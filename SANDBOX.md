@@ -25,9 +25,10 @@ Near-term focus is presentation + product: an **electronic buddy** for patients.
 
 Intended patient experience (mock first, now runnable):
 
-1. Two pictures: chance HbA1c will be **> 6.5%** on **T1→T2** and **T1→T3**.
+1. Two pictures: **korte-termijn** and **lange-termijn risico op diabetes** (mock proxy: HbA1c > 6.5%).
 2. Top **patient-specific** risk factors (local importance, not a global list).
 3. Linked lifestyle intervention cards with theme colours.
+4. Weight / BMI what-if that moves the mock percentages and BMI/waist bars.
 
 Run the demo: `uv run streamlit run product/buddy/app.py`
 
@@ -48,7 +49,7 @@ Inspected on bootstrap. Do not treat this as a license to rewrite shared modelin
 | Notebooks | `Scripts and Notebooks/discovery.ipynb` — NSES parse/impute discovery (Martijn) |
 | Diabetes-relevant columns (raw) | `HBAC_*`, `HB1C_*`, `GLU_*`, `BMI_*`, `SMOKING`, `SPORTS_T1`, family T2DM flags, diet/activity fields |
 
-HbA1c-style fields in the synth table include `HBAC_T1` / `HBAC_T2` / `HBAC_T3` (percent-like values such as 5.5) and `HB1C_*` (mmol/mol-like). The locked mock target is **HbA1c > 6.5%** on T1→T2 and T1→T3 — not a validated clinical claim.
+HbA1c-style fields in the synth table include `HBAC_T1` / `HBAC_T2` / `HBAC_T3` (percent-like values such as 5.5) and `HB1C_*` (mmol/mol-like). Patient-facing titles are short- and long-term diabetes risk; the locked mock proxy underneath is still **HbA1c > 6.5%** — not a validated clinical claim.
 
 ## What this sandbox will not do by default
 

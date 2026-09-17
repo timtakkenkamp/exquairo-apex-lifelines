@@ -1,14 +1,15 @@
 # Electronic buddy (mock demo)
 
-Patient-facing **electronic buddy** for this Tim-owned fork. Near-term it is a product demo: two HbA1c-risk pictures, local factors, and lifestyle cards. A colleagues’ model can later fill the same JSON. Nothing here is a clinical claim.
+Patient-facing **electronic buddy** for this Tim-owned fork. Near-term it is a product demo: two diabetes-risk pictures, local factors, lifestyle cards, and a weight what-if. A colleagues’ model can later fill the same JSON. Nothing here is a clinical claim.
 
 ## Locked demo decisions
 
 | Decision | Value |
 | --- | --- |
-| Outcome | Chance HbA1c will be **> 6.5%** (not ≥, not another cutoff, not metabolic disorder) |
-| Horizons | **T1→T2** and **T1→T3** (percent + low / medium / high) |
+| Patient-facing titles | **Korte-termijn risico op diabetes** and **Lange-termijn risico op diabetes** |
+| Mock proxy underneath | Chance HbA1c will be **> 6.5%** (shown as a small subtitle, not the card title) |
 | Factors | Local (per persona), 3–5 items — mock stand-ins for later model features |
+| What-if | Weight (kg) and BMI sliders update mock risks + BMI/waist bars |
 | Cards | Lifestyle only, with theme colours |
 | Tone | Coaching, motivating, not over-the-top |
 | Guardrails | No medication, no triage, no hard medical advice |
@@ -33,12 +34,25 @@ Then open the URL Streamlit prints (usually http://localhost:8501). Use the side
 
 Optional: if `OPENAI_API_KEY` is already in the environment, “Ask your buddy” may add a short LLM blurb. The app works offline with templated copy if the key is missing.
 
+## What-if formula (transparent mock)
+
+Not a trained model. BMI = `kg / m²` (height is fixed per persona).
+
+```
+short_term = clip(base_short + 0.025 * (BMI - BMI0), 0.02, 0.95)
+long_term  = clip(base_long  + 0.035 * (BMI - BMI0), 0.03, 0.97)
+bmi_bar    = clip(base_bmi_importance + 0.045 * (BMI - BMI0), 0.04, 0.70)
+waist_cm   = waist0 + 0.7 * (kg - kg0)     # only if the persona has a waist factor
+```
+
+BMI direction flips at 25 (below → lowers the picture, at/above → raises). Reset restores the persona’s start weight.
+
 ## What is mocked vs later model
 
 | On screen | Today | Later |
 | --- | --- | --- |
-| T1→T2 / T1→T3 percents | Hardcoded in persona JSON | Model probabilities for HbA1c > 6.5% |
-| Top factors | Hardcoded local importances | Patient-specific attributions from the team model |
+| Short- / long-term diabetes % | Persona JSON + weight what-if heuristic | Model probabilities (same two cards) |
+| Top factors | Hardcoded local importances; BMI/waist move with the what-if | Patient-specific attributions from the team model |
 | Intervention cards | Curated lifestyle library | Same cards, mapped from factor ids |
 | Coaching note | Template (optional OpenAI) | Same contract field |
 | Ask-your-buddy | Guardrails + templates | Same rules; still no prescribing |
