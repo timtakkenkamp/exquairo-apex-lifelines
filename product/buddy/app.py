@@ -166,25 +166,42 @@ def render_risk(risk: dict, short_title: str) -> None:
     )
 
 
+def format_factor_value(factor: dict) -> str:
+    """Patient-facing value: Ja/Nee for 0/1 flags, no raw 1.0."""
+    raw = factor.get("patient_value")
+    unit = str(factor.get("unit") or "").strip()
+    if raw is None or raw == "" or raw == "—":
+        return ""
+    try:
+        number = float(raw)
+    except (TypeError, ValueError):
+        return f"{raw} {unit}".strip()
+    if not unit and (abs(number - 0.0) < 1e-9 or abs(number - 1.0) < 1e-9):
+        return "Ja" if abs(number - 1.0) < 1e-9 else "Nee"
+    if number == int(number):
+        pretty = str(int(number))
+    else:
+        pretty = f"{number:.1f}".rstrip("0").rstrip(".")
+    return f"{pretty} {unit}".strip()
+
+
 def render_factor(factor: dict) -> None:
     up = factor["direction"] == "increases_risk"
     verb = factor_direction_nl(factor["direction"])
     color = "#C45B4A" if up else "#2F8A4A"
     soft = "#E7A08C" if up else "#7ED957"
-    width = max(8, round(float(factor["share"]) * 100))
-    value = factor.get("patient_value") or "—"
-    unit = factor.get("unit") or ""
-    shown = f"{value} {unit}".strip()
+    width = max(8, round(float(factor.get("share") or 0) * 100))
+    shown = format_factor_value(factor)
+    value_html = (
+        f'<div style="color:#5A7A90;font-size:0.88rem;">{shown}</div>' if shown else ""
+    )
     st.markdown(
         f"""
-<div style="background:#fff;border:1px solid #d5e6f2;border-radius:18px;padding:12px 14px 14px;margin-bottom:8px;">
-  <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
-    <div>
-      <div style="font-weight:700;color:#1A4A6E;">{factor_display_label(factor)}</div>
-      <div style="color:#5A7A90;font-size:0.88rem;">{shown}</div>
-      <div style="margin-top:4px;font-size:0.9rem;font-weight:650;color:{color};">{verb}</div>
-    </div>
-    <div style="font-size:0.85rem;font-weight:700;color:{color};white-space:nowrap;">{round(factor["share"] * 100)}%</div>
+<div class="buddy-factor" style="background:#fff;border:1px solid #d5e6f2;border-radius:18px;padding:12px 14px 14px;margin-bottom:8px;">
+  <div>
+    <div style="font-weight:700;color:#1A4A6E;">{factor_display_label(factor)}</div>
+    {value_html}
+    <div style="margin-top:4px;font-size:0.9rem;font-weight:650;color:{color};">{verb}</div>
   </div>
   <div style="margin-top:8px;height:10px;background:#e4eef6;border-radius:999px;overflow:hidden;">
     <div style="width:{width}%;height:10px;background:linear-gradient(90deg,{soft},{color});border-radius:999px;"></div>
@@ -408,16 +425,33 @@ st.caption("Drie stappen: je risico → waarom jij → doe dit.")
 
 # 1) Risico — slider first so the two big numbers stay live
 st.subheader("1. Je risico")
-wcol, bcol, rcol = st.columns([3, 2, 1])
-with wcol:
-    st.slider("Gewicht (kg)", 45.0, 140.0, step=0.5, key="whatif_weight", on_change=_sync_weight_to_bmi)
-with bcol:
-    st.number_input("BMI", min_value=16.0, max_value=50.0, step=0.1, key="whatif_bmi", on_change=_sync_bmi_to_weight)
-with rcol:
-    st.write("")
-    if st.button("Reset"):
-        st.session_state.whatif_reset = True
-        st.rerun()
+st.markdown('<div class="buddy-whatif-flag" aria-hidden="true"></div>', unsafe_allow_html=True)
+with st.container(border=True):
+    st.caption("Wat als je gewicht verandert?")
+    wcol, bcol, rcol = st.columns([3, 2, 1])
+    with wcol:
+        st.slider(
+            "Gewicht (kg)",
+            45.0,
+            140.0,
+            step=0.5,
+            key="whatif_weight",
+            on_change=_sync_weight_to_bmi,
+        )
+    with bcol:
+        st.number_input(
+            "BMI",
+            min_value=16.0,
+            max_value=50.0,
+            step=0.1,
+            key="whatif_bmi",
+            on_change=_sync_bmi_to_weight,
+        )
+    with rcol:
+        st.write("")
+        if st.button("Reset"):
+            st.session_state.whatif_reset = True
+            st.rerun()
 
 if use_live:
     payload = overlay_live_predictions(

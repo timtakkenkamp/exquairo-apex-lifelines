@@ -9,6 +9,16 @@
   max-width: 1120px;
 }
 
+.block-container h2,
+.block-container h3 {
+  margin-top: 0.85rem !important;
+  margin-bottom: 0.35rem !important;
+}
+
+.block-container [data-testid="stVerticalBlock"] {
+  gap: 0.72rem;
+}
+
 div[data-testid="stChatInput"] {
   display: none;
 }
@@ -98,4 +108,17 @@ header[data-testid="stHeader"] {
   min-height: 2.4rem;
   padding-left: 1.4rem;
   padding-right: 1.4rem;
+}
+
+/* What-if: one light card around gewicht / BMI / reset */
+.stApp:has(.buddy-whatif-flag) [data-testid="stVerticalBlockBorderWrapper"] {
+  background: #f3f8fc;
+  border: 1px solid #d5e6f2 !important;
+  border-radius: 20px !important;
+  padding: 0.15rem 0.35rem 0.25rem;
+  margin-bottom: 0.35rem;
+}
+
+.buddy-factor {
+  margin-bottom: 0.45rem !important;
 }

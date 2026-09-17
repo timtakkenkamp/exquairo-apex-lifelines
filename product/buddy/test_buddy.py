@@ -138,6 +138,8 @@ class SimplifyTests(unittest.TestCase):
         self.assertIn('class="buddy-tile"', app)
         self.assertIn("Past bij jou", app)
         self.assertIn("audience_persona_pills", app)
+        self.assertIn("buddy-whatif-flag", app)
+        self.assertIn("format_factor_value", app)
 
 
 class CopyTests(unittest.TestCase):
