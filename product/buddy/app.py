@@ -15,6 +15,22 @@ from buddy_lib import (
     validate_payload,
 )
 
+PERSONA_ORDER = ["persona-river", "persona-sam", "persona-noor"]
+
+THEME_COLORS = {
+    "sport": {"bar": "#1b7f6b", "soft": "#d7efe8", "ink": "#146354"},
+    "food": {"bar": "#e07a3d", "soft": "#fde6d4", "ink": "#b34d1f"},
+    "sleep": {"bar": "#5459c4", "soft": "#e4e5f8", "ink": "#3d41a0"},
+    "smoking": {"bar": "#6a5678", "soft": "#ece4f0", "ink": "#4e3f59"},
+    "alcohol": {"bar": "#c48a2b", "soft": "#f8ebcc", "ink": "#8a5f12"},
+}
+
+RISK_COLORS = {
+    "low": {"ink": "#2d8a6e", "badge_bg": "#d9f3ea", "badge_ink": "#1d6b54", "bar": "#2d8a6e"},
+    "medium": {"ink": "#c9862a", "badge_bg": "#f8e6c6", "badge_ink": "#8a5a12", "bar": "#c9862a"},
+    "high": {"ink": "#d45b4a", "badge_bg": "#f8d9d4", "badge_ink": "#9a3328", "bar": "#d45b4a"},
+}
+
 st.set_page_config(
     page_title="Buddy · HbA1c lifestyle companion",
     page_icon="🌿",
@@ -22,8 +38,10 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-CSS = Path(__file__).with_name("styles.css").read_text(encoding="utf-8")
-st.markdown(f"<style>{CSS}</style>", unsafe_allow_html=True)
+st.markdown(
+    f"<style>{Path(__file__).with_name('styles.css').read_text(encoding='utf-8')}</style>",
+    unsafe_allow_html=True,
+)
 
 
 @st.cache_data
@@ -31,70 +49,85 @@ def personas() -> list[dict]:
     data = load_personas()
     problems = []
     for item in data:
-        problems.extend(f"{item.get('patient', {}).get('persona_id')}: {e}" for e in validate_payload(item))
+        problems.extend(
+            f"{item.get('patient', {}).get('persona_id')}: {e}" for e in validate_payload(item)
+        )
     if problems:
         st.warning("Fixture checks:\n- " + "\n- ".join(problems))
-    return data
+    by_id = {p["patient"]["persona_id"]: p for p in data}
+    return [by_id[pid] for pid in PERSONA_ORDER if pid in by_id]
 
 
-def risk_card(risk: dict) -> str:
+def render_risk(risk: dict) -> None:
     label = risk["risk_label"]
+    colors = RISK_COLORS[label]
     score_pct = pct(risk["risk_score"])
     width = max(4, round(float(risk["risk_score"]) * 100))
-    return f"""
-    <div class="risk-card {label}">
-      <div class="horizon">{risk["horizon"]}</div>
-      <div class="when">{risk["label"]}</div>
-      <div class="pct">{score_pct}</div>
-      <span class="badge {label}">{label}</span>
-      <div class="risk-sub">Chance HbA1c will be <strong>&gt; 6.5%</strong></div>
-      <div class="meter {label}"><span style="width:{width}%"></span></div>
-    </div>
-    """
+    st.markdown(
+        f"""
+<div style="background:#fffdf8;border:1px solid #e4ddd0;border-radius:18px;padding:18px 18px 16px;box-shadow:0 8px 24px rgba(28,42,37,0.04);">
+  <div style="font-weight:700;font-size:1.05rem;color:#1c2a25;">{risk["horizon"]}</div>
+  <div style="color:#5c6b64;font-size:0.86rem;margin:0 0 8px 0;">{risk["label"]}</div>
+  <div style="font-size:3rem;font-weight:750;letter-spacing:-0.03em;line-height:1;color:{colors["ink"]};">{score_pct}</div>
+  <span style="display:inline-block;margin-top:8px;border-radius:999px;padding:3px 10px;font-size:0.75rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;background:{colors["badge_bg"]};color:{colors["badge_ink"]};">{label}</span>
+  <div style="margin-top:10px;color:#5c6b64;font-size:0.9rem;">Chance HbA1c will be <strong>above 6.5%</strong> (&gt; 6.5%)</div>
+  <div style="margin-top:12px;height:8px;background:#eee7da;border-radius:999px;overflow:hidden;">
+    <div style="width:{width}%;height:8px;background:{colors["bar"]};border-radius:999px;"></div>
+  </div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
 
 
-def factor_row(factor: dict) -> str:
+def render_factor(factor: dict) -> None:
     up = factor["direction"] == "increases_risk"
-    direction = "up" if up else "down"
     verb = "Raises the picture" if up else "Lowers the picture"
+    color = "#d45b4a" if up else "#1b7f6b"
+    soft = "#e7a08c" if up else "#7cc4b0"
     width = max(8, round(float(factor["share"]) * 100))
     value = factor.get("patient_value") or "—"
     unit = factor.get("unit") or ""
     shown = f"{value} {unit}".strip()
-    return f"""
-    <div class="factor-row">
-      <div class="factor-top">
-        <div>
-          <div class="factor-name">{factor["label"]}</div>
-          <div class="factor-val">{shown}</div>
-        </div>
-        <div class="factor-dir {direction}">{verb} · {round(factor["share"] * 100)}%</div>
-      </div>
-      <div class="factor-bar {direction}"><span style="width:{width}%"></span></div>
+    st.markdown(
+        f"""
+<div style="background:#fffdf8;border:1px solid #e4ddd0;border-radius:14px;padding:12px 14px 14px;margin-bottom:8px;">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline;">
+    <div>
+      <div style="font-weight:650;color:#1c2a25;">{factor["label"]}</div>
+      <div style="color:#5c6b64;font-size:0.88rem;">{shown}</div>
     </div>
-    """
+    <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;color:{color};white-space:nowrap;">{verb} · {round(factor["share"] * 100)}%</div>
+  </div>
+  <div style="margin-top:8px;height:10px;background:#efe8db;border-radius:999px;overflow:hidden;">
+    <div style="width:{width}%;height:10px;background:linear-gradient(90deg,{soft},{color});border-radius:999px;"></div>
+  </div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
 
 
-def intervention_card(item: dict, factor_labels: dict[str, str]) -> str:
+def render_intervention(item: dict, factor_labels: dict[str, str]) -> None:
     theme = item.get("theme") or "sport"
     meta = THEME_META.get(theme, {"label": theme.title(), "token": theme})
+    colors = THEME_COLORS.get(theme, THEME_COLORS["sport"])
     links = ", ".join(factor_labels.get(fid, fid) for fid in item.get("linked_factors") or [])
-    return f"""
-    <article class="ix-card {meta["token"]}">
-      <div class="ix-theme">{meta["label"]}</div>
-      <h3>{item["title"]}</h3>
-      <p>{item["summary"]}</p>
-      <div class="ix-link">Linked to: {links or "your local factors"}</div>
-    </article>
-    """
+    st.markdown(
+        f"""
+<div style="background:linear-gradient(180deg,{colors["soft"]},#fffdf8 42%);border:1px solid #e4ddd0;border-top:7px solid {colors["bar"]};border-radius:16px;padding:14px 14px 16px;min-height:200px;">
+  <div style="font-size:0.75rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:{colors["ink"]};margin-bottom:6px;">{meta["label"]}</div>
+  <div style="font-size:1.08rem;font-weight:700;color:#1c2a25;margin:0 0 8px 0;">{item["title"]}</div>
+  <div style="color:#3d4a44;font-size:0.92rem;line-height:1.45;margin-bottom:10px;">{item["summary"]}</div>
+  <div style="font-size:0.78rem;color:#5c6b64;">Linked to: {links or "your local factors"}</div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
 
 
 payloads = personas()
 by_id = {p["patient"]["persona_id"]: p for p in payloads}
-labels = {
-    pid: f"{p['patient']['display_name']} · {p['risks'][1]['risk_label']} T1→T3"
-    for pid, p in by_id.items()
-}
 
 with st.sidebar:
     st.markdown("### Demo patient")
@@ -102,7 +135,10 @@ with st.sidebar:
     persona_id = st.radio(
         "Who are we coaching?",
         options=list(by_id),
-        format_func=lambda pid: labels[pid],
+        format_func=lambda pid: (
+            f"{by_id[pid]['patient']['display_name']} · "
+            f"{by_id[pid]['risks'][1]['risk_label']} T1→T3"
+        ),
     )
     payload = by_id[persona_id]
     patient = payload["patient"]
@@ -116,22 +152,22 @@ with st.sidebar:
             st.write(f"{key.replace('_', ' ')}: `{value}`")
     st.divider()
     st.caption("Mock JSON → later a colleagues’ model API with the same contract.")
-    st.caption("Source: `" + payload.get("source", "mock") + "` · schema " + payload.get("schema_version", "?"))
+    st.caption(
+        "Source: `"
+        + payload.get("source", "mock")
+        + "` · schema "
+        + payload.get("schema_version", "?")
+    )
 
-st.markdown(
-    f"""
-    <div class="buddy-kicker">Electronic buddy · mock demo</div>
-    <h1 class="buddy-title">Hi {patient["display_name"]} — here is your lifestyle picture</h1>
-    <p class="buddy-lead">
-      Two horizons for the chance HbA1c will be <strong>&gt; 6.5%</strong>,
-      plus the factors that matter <em>for you</em> (not a global leaderboard).
-    </p>
-    <div class="disclaimer-banner">
-      Coaching companion for a product demo. Not a diagnosis, not triage, not a prescription.
-      Medical questions belong with a care provider.
-    </div>
-    """,
-    unsafe_allow_html=True,
+st.caption("ELECTRONIC BUDDY · MOCK DEMO")
+st.title(f"Hi {patient['display_name']} — here is your lifestyle picture")
+st.write(
+    "Two horizons for the chance HbA1c will be **above 6.5%** (> 6.5%), "
+    "plus the factors that matter *for you* (not a global leaderboard)."
+)
+st.info(
+    "Coaching companion for a product demo. Not a diagnosis, not triage, "
+    "not a prescription. Medical questions belong with a care provider."
 )
 
 st.subheader("Your two risk pictures")
@@ -139,46 +175,71 @@ st.caption("T1 is the first visit. T2 and T3 are later visits. Percentages are m
 c1, c2 = st.columns(2)
 risks = {r["id"]: r for r in payload["risks"]}
 with c1:
-    st.markdown(risk_card(risks["t1_t2"]), unsafe_allow_html=True)
+    render_risk(risks["t1_t2"])
 with c2:
-    st.markdown(risk_card(risks["t1_t3"]), unsafe_allow_html=True)
+    render_risk(risks["t1_t3"])
 
 st.subheader("What is shaping your picture")
-st.caption("Local importance for this persona only. Bar length is this person’s mix, not a team-wide ranking.")
+st.caption(
+    "Local importance for this persona only. Bar length is this person’s mix, not a team-wide ranking."
+)
 for factor in factor_share(payload["top_factors"]):
-    st.markdown(factor_row(factor), unsafe_allow_html=True)
+    render_factor(factor)
 
 st.subheader("Small steps that fit you")
-st.caption("Lifestyle only. Theme colours: movement = green/blue, food = orange/coral, sleep = indigo, smoke-free = plum, alcohol = amber.")
+st.caption(
+    "Lifestyle only. Theme colours: movement = green/blue, food = orange/coral, "
+    "sleep = indigo, smoke-free = plum, alcohol = amber."
+)
 factor_labels = {f["id"]: f["label"] for f in payload["top_factors"]}
-cards = "".join(intervention_card(ix, factor_labels) for ix in payload["interventions"])
-st.markdown(f'<div class="ix-grid">{cards}</div>', unsafe_allow_html=True)
+ix_cols = st.columns(len(payload["interventions"]))
+for col, item in zip(ix_cols, payload["interventions"]):
+    with col:
+        render_intervention(item, factor_labels)
 
 st.subheader("A note from your buddy")
 note = (payload.get("coaching") or {}).get("template", "")
-st.markdown(f'<div class="coach-card">{note}</div>', unsafe_allow_html=True)
+st.markdown(
+    f"""
+<div style="background:#fffdf8;border:1px solid #e4ddd0;border-left:7px solid #2a8fb8;border-radius:16px;padding:16px 18px;color:#1c2a25;">
+  {note}
+</div>
+""",
+    unsafe_allow_html=True,
+)
 
 st.subheader("Ask your buddy")
-st.caption("Try a lifestyle question, then try a medical one (e.g. “should I take metformin?”) to see the guardrail.")
+st.caption(
+    'Try a lifestyle question, then try a medical one (e.g. “should I take metformin?”) to see the guardrail.'
+)
 if "chat" not in st.session_state or st.session_state.get("chat_persona") != persona_id:
     st.session_state.chat = []
     st.session_state.chat_persona = persona_id
 
-question = st.chat_input("Ask about walking, meals, sleep, smoking, or alcohol…")
-if question:
+with st.form("ask_buddy", clear_on_submit=True):
+    question = st.text_input(
+        "Your question",
+        placeholder="Ask about walking, meals, sleep, smoking, or alcohol…",
+    )
+    asked = st.form_submit_button("Ask")
+if asked:
     reply, source = answer_question(question, payload)
     st.session_state.chat.append((question, reply, source))
 
 for q, reply, source in st.session_state.chat:
-    with st.chat_message("user"):
-        st.write(q)
-    with st.chat_message("assistant"):
-        klass = "guardrail" if source == "guardrail" else ""
-        st.markdown(f'<div class="reply {klass}">{reply}</div>', unsafe_allow_html=True)
-        st.caption(f"Reply source: {source}")
+    st.markdown(f"**You:** {q}")
+    bg = "#fff4ee" if source == "guardrail" else "#eef6f3"
+    border = "#f0d2c4" if source == "guardrail" else "#cfe5dc"
+    st.markdown(
+        f"""
+<div style="background:{bg};border:1px solid {border};border-radius:12px;padding:12px 14px;margin:0 0 12px 0;">
+  {reply}<br><span style="color:#5c6b64;font-size:0.8rem;">Reply source: {source}</span>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
 
-st.markdown(
-    f'<p class="footer-note">{payload.get("disclaimer", "")} '
-    "Later the colleagues’ model fills the same JSON; this UI should not need a redesign.</p>",
-    unsafe_allow_html=True,
+st.caption(
+    payload.get("disclaimer", "")
+    + " Later the colleagues’ model fills the same JSON; this UI should not need a redesign."
 )
