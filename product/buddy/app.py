@@ -11,10 +11,13 @@ from buddy_lib import (
     THEME_META,
     answer_question,
     apply_weight_whatif,
+    factor_direction_nl,
+    factor_display_label,
     factor_share,
     load_personas,
     pct,
     persona_body,
+    risk_band_nl,
     validate_payload,
 )
 
@@ -75,7 +78,7 @@ def render_risk(risk: dict) -> None:
   <div style="font-weight:700;font-size:1.12rem;color:#1c2a25;line-height:1.25;">{title}</div>
   <div style="color:#5c6b64;font-size:0.86rem;margin:6px 0 8px 0;">{subtitle}</div>
   <div style="font-size:3rem;font-weight:750;letter-spacing:-0.03em;line-height:1;color:{colors["ink"]};">{score_pct}</div>
-  <span style="display:inline-block;margin-top:8px;border-radius:999px;padding:3px 10px;font-size:0.75rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;background:{colors["badge_bg"]};color:{colors["badge_ink"]};">{label}</span>
+    <span style="display:inline-block;margin-top:8px;border-radius:999px;padding:3px 10px;font-size:0.75rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;background:{colors["badge_bg"]};color:{colors["badge_ink"]};">{risk_band_nl(label)}</span>
   <div style="margin-top:12px;height:8px;background:#eee7da;border-radius:999px;overflow:hidden;">
     <div style="width:{width}%;height:8px;background:{colors["bar"]};border-radius:999px;"></div>
   </div>
@@ -87,7 +90,7 @@ def render_risk(risk: dict) -> None:
 
 def render_factor(factor: dict) -> None:
     up = factor["direction"] == "increases_risk"
-    verb = "Raises the picture" if up else "Lowers the picture"
+    verb = factor_direction_nl(factor["direction"])
     color = "#d45b4a" if up else "#1b7f6b"
     soft = "#e7a08c" if up else "#7cc4b0"
     width = max(8, round(float(factor["share"]) * 100))
@@ -97,12 +100,13 @@ def render_factor(factor: dict) -> None:
     st.markdown(
         f"""
 <div style="background:#fffdf8;border:1px solid #e4ddd0;border-radius:14px;padding:12px 14px 14px;margin-bottom:8px;">
-  <div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline;">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
     <div>
-      <div style="font-weight:650;color:#1c2a25;">{factor["label"]}</div>
+      <div style="font-weight:650;color:#1c2a25;">{factor_display_label(factor)}</div>
       <div style="color:#5c6b64;font-size:0.88rem;">{shown}</div>
+      <div style="margin-top:4px;font-size:0.86rem;font-weight:650;color:{color};">{verb}</div>
     </div>
-    <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;color:{color};white-space:nowrap;">{verb} · {round(factor["share"] * 100)}%</div>
+    <div style="font-size:0.85rem;font-weight:700;color:{color};white-space:nowrap;">{round(factor["share"] * 100)}%</div>
   </div>
   <div style="margin-top:8px;height:10px;background:#efe8db;border-radius:999px;overflow:hidden;">
     <div style="width:{width}%;height:10px;background:linear-gradient(90deg,{soft},{color});border-radius:999px;"></div>
@@ -124,7 +128,7 @@ def render_intervention(item: dict, factor_labels: dict[str, str]) -> None:
   <div style="font-size:0.75rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:{colors["ink"]};margin-bottom:6px;">{meta["label"]}</div>
   <div style="font-size:1.08rem;font-weight:700;color:#1c2a25;margin:0 0 8px 0;">{item["title"]}</div>
   <div style="color:#3d4a44;font-size:0.92rem;line-height:1.45;margin-bottom:10px;">{item["summary"]}</div>
-  <div style="font-size:0.78rem;color:#5c6b64;">Linked to: {links or "your local factors"}</div>
+      <div style="font-size:0.78rem;color:#5c6b64;">Gekoppeld aan: {links or "jouw lokale factoren"}</div>
 </div>
 """,
         unsafe_allow_html=True,
@@ -154,7 +158,7 @@ with st.sidebar:
         options=list(by_id),
         format_func=lambda pid: (
             f"{by_id[pid]['patient']['display_name']} · "
-            f"{by_id[pid]['risks'][1]['risk_label']} lange termijn"
+            f"{risk_band_nl(by_id[pid]['risks'][1]['risk_label'])} lange termijn"
         ),
     )
     baseline = by_id[persona_id]
@@ -194,16 +198,16 @@ payload = apply_weight_whatif(
 patient = payload["patient"]
 whatif = payload.get("whatif") or {}
 
-st.caption("ELECTRONIC BUDDY · MOCK DEMO")
-st.title(f"Hi {patient['display_name']} — here is your lifestyle picture")
+st.caption("ELEKTRONISCHE BUDDY · DEMO")
+st.title(f"Hoi {patient['display_name']} — hier is jouw leefstijlbeeld")
 st.write(
-    "Two pictures: **korte-termijn** and **lange-termijn risico op diabetes**, "
-    "plus the factors that matter *for you* (not a global leaderboard)."
+    "Twee beelden: **korte-termijn** en **lange-termijn risico op diabetes**, "
+    "plus de factoren die *bij jou* horen (geen algemene ranglijst)."
 )
 st.info(
-    "Coaching companion for a product demo. Not a diagnosis, not triage, "
-    "not a prescription. Medical questions belong with a care provider. "
-    "Underlying mock proxy remains HbA1c above 6.5%."
+    "Coachingsmaatje voor een productdemo. Geen diagnose, geen triage, "
+    "geen recept. Medische vragen horen bij je zorgverlener. "
+    "Onderliggende demo-proxy blijft HbA1c boven 6,5%."
 )
 
 st.subheader("Wat als je gewicht verandert?")
@@ -255,10 +259,10 @@ payload = apply_weight_whatif(baseline, weight_kg=float(st.session_state.whatif_
 whatif = payload.get("whatif") or {}
 patient = payload["patient"]
 
-st.subheader("Your two risk pictures")
+st.subheader("Jouw twee risico's")
 st.caption(
-    "Patient-facing titles are short- and long-term diabetes risk. "
-    "The mock underneath is still an HbA1c > 6.5% proxy."
+    "Korte- en lange-termijn risico op diabetes. "
+    "De demo-proxy eronder blijft HbA1c boven 6,5%."
 )
 c1, c2 = st.columns(2)
 risks = {r["id"]: r for r in payload["risks"]}
@@ -267,20 +271,20 @@ with c1:
 with c2:
     render_risk(risks["t1_t3"])
 
-st.subheader("What is shaping your picture")
+st.subheader("Wat beïnvloedt jouw risico")
 st.caption(
-    "Local importance for this persona — bars move when you change weight. "
-    "Not a team-wide ranking and not a trained attribution."
+    "Lokale bijdrage voor deze persoon — de staven bewegen als je gewicht aanpast. "
+    "Geen team-brede ranglijst en geen getraind model."
 )
 for factor in factor_share(payload["top_factors"]):
     render_factor(factor)
 
-st.subheader("Small steps that fit you")
+st.subheader("Kleine stappen die bij je passen")
 st.caption(
-    "Lifestyle only. Theme colours: movement = green/blue, food = orange/coral, "
-    "sleep = indigo, smoke-free = plum, alcohol = amber."
+    "Alleen leefstijl. Kleuren: beweging = groen/blauw, voeding = oranje/koraal, "
+    "slaap = indigo, rookvrij = paars, alcohol = amber."
 )
-factor_labels = {f["id"]: f["label"] for f in payload["top_factors"]}
+factor_labels = {f["id"]: factor_display_label(f) for f in payload["top_factors"]}
 ix_cols = st.columns(len(payload["interventions"]))
 for col, item in zip(ix_cols, payload["interventions"]):
     with col:
@@ -291,13 +295,13 @@ note = (payload.get("coaching") or {}).get("template", "")
 if whatif.get("active"):
     if whatif["delta_kg"] < 0:
         extra = (
-            f" At {whatif['weight_kg']:.0f} kg the mock picture eases a little — "
-            "useful as a lifestyle lever, not a prescription."
+            f" Bij {whatif['weight_kg']:.0f} kg wordt het demobeeld iets rustiger — "
+            "een leefstijlknop, geen recept."
         )
     else:
         extra = (
-            f" At {whatif['weight_kg']:.0f} kg the mock picture tightens a little. "
-            "Small, repeatable food and movement steps matter more than a perfect plan."
+            f" Bij {whatif['weight_kg']:.0f} kg wordt het demobeeld iets strakker. "
+            "Kleine, herhaalbare stappen in eten en bewegen tellen meer dan een perfect plan."
         )
     note = f"{note}{extra}"
 st.markdown(

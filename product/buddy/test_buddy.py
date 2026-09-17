@@ -10,6 +10,7 @@ from buddy_lib import (
     PATIENT_RISK_COPY,
     answer_question,
     apply_weight_whatif,
+    factor_direction_nl,
     is_medical_or_triage,
     load_payload,
     load_personas,
@@ -75,6 +76,21 @@ class WhatIfTests(unittest.TestCase):
         self.assertFalse(same["whatif"]["active"])
 
 
+class CopyTests(unittest.TestCase):
+    def test_factor_direction_is_dutch(self):
+        self.assertEqual(
+            factor_direction_nl("increases_risk"),
+            "verhoogt je risico op diabetes",
+        )
+        self.assertEqual(
+            factor_direction_nl("decreases_risk"),
+            "verlaagt je risico op diabetes",
+        )
+        app = (EXAMPLE_CONTRACT.parent / "app.py").read_text(encoding="utf-8").lower()
+        self.assertNotIn("raises the picture", app)
+        self.assertNotIn("lowers the picture", app)
+
+
 class GuardrailTests(unittest.TestCase):
     def test_medical_deflects(self):
         self.assertTrue(is_medical_or_triage("Should I take metformin?"))
@@ -86,7 +102,7 @@ class GuardrailTests(unittest.TestCase):
         self.assertEqual(text, DEFLECT_MESSAGE)
         text, source = answer_question("How can I walk more?", river)
         self.assertEqual(source, "template")
-        self.assertIn("walk", text.lower())
+        self.assertIn("wandel", text.lower())
 
 
 if __name__ == "__main__":

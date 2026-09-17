@@ -45,7 +45,7 @@ bmi_bar    = clip(base_bmi_importance + 0.045 * (BMI - BMI0), 0.04, 0.70)
 waist_cm   = waist0 + 0.7 * (kg - kg0)     # only if the persona has a waist factor
 ```
 
-BMI direction flips at 25 (below → lowers the picture, at/above → raises). Reset restores the persona’s start weight.
+BMI direction flips at 25: below → **verlaagt je risico op diabetes**, at/above → **verhoogt je risico op diabetes**. Reset restores the persona’s start weight.
 
 ## What is mocked vs later model
 

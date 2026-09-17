@@ -47,34 +47,34 @@
   "top_factors": [
     {
       "id": "smoking",
-      "label": "Smoking",
+      "label": "Roken",
       "direction": "increases_risk",
       "importance": 0.29,
-      "patient_value": "occasional",
+      "patient_value": "af en toe",
       "unit": null,
       "note": "Sam's strongest local mock driver."
     },
     {
       "id": "alcohol",
-      "label": "Alcohol pattern",
+      "label": "Alcoholpatroon",
       "direction": "increases_risk",
       "importance": 0.21,
-      "patient_value": "above none",
+      "patient_value": "meer dan geen",
       "unit": null,
       "note": "Local mock contribution — not a trained attribution."
     },
     {
       "id": "cycle_commute",
-      "label": "Cycling to work",
+      "label": "Fietsen naar werk",
       "direction": "decreases_risk",
       "importance": 0.18,
-      "patient_value": "some days",
+      "patient_value": "sommige dagen",
       "unit": null,
       "note": "Protective local factor unique to Sam."
     },
     {
       "id": "bmi",
-      "label": "Body mass index",
+      "label": "BMI",
       "direction": "increases_risk",
       "importance": 0.12,
       "patient_value": "26.1",
@@ -83,10 +83,10 @@
     },
     {
       "id": "sports",
-      "label": "Weekly sports / activity",
+      "label": "Sport / beweging",
       "direction": "decreases_risk",
       "importance": 0.09,
-      "patient_value": "commute movement",
+      "patient_value": "beweging via woon-werk",
       "unit": null,
       "note": "Activity already working in Sam's favour."
     }
@@ -95,22 +95,22 @@
     {
       "id": "smoke-free-days",
       "theme": "smoking",
-      "title": "Grow smoke-free days",
-      "summary": "Keep the bike commute and add two fully smoke-free days this week. No products suggested here — your care team can help if you want extra support.",
+      "title": "Meer rookvrije dagen",
+      "summary": "Houd de fietsrit en voeg deze week twee volledig rookvrije dagen toe. Geen middelen hier — je zorgteam helpt als je extra steun wilt.",
       "linked_factors": ["smoking"]
     },
     {
       "id": "alcohol-free-evenings",
       "theme": "alcohol",
-      "title": "Two alcohol-free evenings",
-      "summary": "Pick two weeknights that stay drink-free. Swap the usual glass for a sparkling water ritual you actually like.",
+      "title": "Twee avonden zonder alcohol",
+      "summary": "Kies twee doordeweekse avonden zonder alcohol. Vervang het gebruikelijke glas door bruiswater dat je echt lust.",
       "linked_factors": ["alcohol"]
     },
     {
       "id": "keep-cycling",
       "theme": "sport",
-      "title": "Protect the commute habit",
-      "summary": "Your cycling already shows up as a plus. Lock in three bike days and treat missed rain days as a walk, not a write-off.",
+      "title": "Bescherm je fietsrit",
+      "summary": "Je fietsen telt al als plus. Zet drie fietsdagen vast; een regendag wordt een wandeling, geen afschrijving.",
       "linked_factors": ["cycle_commute", "sports"]
     }
   ],

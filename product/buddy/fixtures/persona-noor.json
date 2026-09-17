@@ -47,16 +47,16 @@
   "top_factors": [
     {
       "id": "sports",
-      "label": "Weekly sports / activity",
+      "label": "Sport / beweging",
       "direction": "decreases_risk",
       "importance": 0.28,
-      "patient_value": "regular",
+      "patient_value": "regelmatig",
       "unit": null,
       "note": "Noor's strongest protective local factor."
     },
     {
       "id": "bmi",
-      "label": "Body mass index",
+      "label": "BMI",
       "direction": "decreases_risk",
       "importance": 0.22,
       "patient_value": "23.4",
@@ -65,28 +65,28 @@
     },
     {
       "id": "sleep",
-      "label": "Sleep quality",
+      "label": "Slaap",
       "direction": "decreases_risk",
       "importance": 0.14,
-      "patient_value": "ok",
+      "patient_value": "oké",
       "unit": null,
       "note": "Maintenance factor, not a problem to fix."
     },
     {
       "id": "smoking",
-      "label": "Smoking",
+      "label": "Roken",
       "direction": "decreases_risk",
       "importance": 0.11,
-      "patient_value": "no",
+      "patient_value": "nee",
       "unit": null,
       "note": "Absence of smoking as a protective local signal."
     },
     {
       "id": "kcal",
-      "label": "Energy intake pattern",
+      "label": "Energie-inname",
       "direction": "increases_risk",
       "importance": 0.07,
-      "patient_value": "slightly high some days",
+      "patient_value": "soms wat aan de hoge kant",
       "unit": null,
       "note": "Smallest local nudge — keep an eye on busy-day snacking."
     }
@@ -95,22 +95,22 @@
     {
       "id": "keep-training",
       "theme": "sport",
-      "title": "Keep the sessions you already like",
-      "summary": "Do not add volume for its own sake. Protect two sessions you enjoy and treat them as non-negotiable calendar blocks.",
+      "title": "Houd de training die je al fijn vindt",
+      "summary": "Voeg geen volume toe om het volume. Bescherm twee sessies die je leuk vindt en zet ze in je agenda als vast.",
       "linked_factors": ["sports"]
     },
     {
       "id": "food-maintain",
       "theme": "food",
-      "title": "Steady meals on busy days",
-      "summary": "Your overall pattern looks balanced. Pack one simple lunch for the two longest workdays so grazing does not creep up.",
+      "title": "Vaste maaltijden op drukke dagen",
+      "summary": "Je patroon oogt in balans. Neem één eenvoudige lunch mee op de twee langste werkdagen, zodat tussendoor knabbelen niet sluipenderwijs toeneemt.",
       "linked_factors": ["kcal", "bmi"]
     },
     {
       "id": "sleep-keep",
       "theme": "sleep",
-      "title": "Guard the sleep that already works",
-      "summary": "Keep the wind-down you have. If a late week shows up, recover with the same bedtime the next night rather than a weekend lie-in marathon.",
+      "title": "Bescherm de slaap die al goed gaat",
+      "summary": "Houd je avondritueel. Wordt het een late week, pak de volgende nacht dezelfde bedtijd — geen weekend-uitslaapmarathon.",
       "linked_factors": ["sleep"]
     }
   ],

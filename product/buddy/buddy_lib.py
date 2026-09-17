@@ -18,11 +18,35 @@ EXAMPLE_CONTRACT = ROOT / "contract.example.json"
 RISK_ORDER = {"low": 0, "medium": 1, "high": 2}
 
 THEME_META = {
-    "sport": {"label": "Movement", "token": "sport"},
-    "food": {"label": "Food", "token": "food"},
-    "sleep": {"label": "Sleep", "token": "sleep"},
-    "smoking": {"label": "Smoke-free", "token": "smoking"},
+    "sport": {"label": "Beweging", "token": "sport"},
+    "food": {"label": "Voeding", "token": "food"},
+    "sleep": {"label": "Slaap", "token": "sleep"},
+    "smoking": {"label": "Rookvrij", "token": "smoking"},
     "alcohol": {"label": "Alcohol", "token": "alcohol"},
+}
+
+FACTOR_DIRECTION_NL = {
+    "increases_risk": "verhoogt je risico op diabetes",
+    "decreases_risk": "verlaagt je risico op diabetes",
+}
+
+RISK_BAND_NL = {
+    "low": "laag",
+    "medium": "middel",
+    "high": "hoog",
+}
+
+FACTOR_LABEL_NL = {
+    "bmi": "BMI",
+    "weight": "Gewicht",
+    "waist": "Tailleomvang",
+    "sports": "Sport / beweging",
+    "family_t2dm": "Familiegeschiedenis type 2 diabetes",
+    "sleep": "Slaap",
+    "smoking": "Roken",
+    "alcohol": "Alcoholpatroon",
+    "cycle_commute": "Fietsen naar werk",
+    "kcal": "Energie-inname",
 }
 
 # Patient-facing titles. Internal ids stay t1_t2 / t1_t3 (HbA1c > 6.5% mock proxy).
@@ -125,6 +149,18 @@ def is_medical_or_triage(text: str) -> bool:
 
 def pct(score: float) -> str:
     return f"{round(float(score) * 100)}%"
+
+
+def factor_display_label(factor: dict[str, Any]) -> str:
+    return FACTOR_LABEL_NL.get(factor.get("id"), factor.get("label") or factor.get("id") or "")
+
+
+def factor_direction_nl(direction: str) -> str:
+    return FACTOR_DIRECTION_NL.get(direction, FACTOR_DIRECTION_NL["increases_risk"])
+
+
+def risk_band_nl(label: str) -> str:
+    return RISK_BAND_NL.get(label, label)
 
 
 def factor_share(factors: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -289,7 +325,7 @@ def template_reply(question: str, payload: dict[str, Any]) -> str:
         if any(n in q for n in needles):
             return (
                 f"{intervention['title']}: {intervention['summary']} "
-                "This is lifestyle coaching, not medical advice."
+                "Dit is leefstijlcoaching, geen medisch advies."
             )
     coaching = (payload.get("coaching") or {}).get("template")
     if coaching:

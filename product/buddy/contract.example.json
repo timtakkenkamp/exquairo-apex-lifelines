@@ -47,7 +47,7 @@
   "top_factors": [
     {
       "id": "bmi",
-      "label": "Body mass index",
+      "label": "BMI",
       "direction": "increases_risk",
       "importance": 0.34,
       "patient_value": "31.2",
@@ -56,16 +56,16 @@
     },
     {
       "id": "sports",
-      "label": "Weekly sports / activity",
+      "label": "Sport / beweging",
       "direction": "increases_risk",
       "importance": 0.24,
-      "patient_value": "none reported",
+      "patient_value": "niet gerapporteerd",
       "unit": null,
       "note": "Low activity treated as risk-raising in this mock."
     },
     {
       "id": "waist",
-      "label": "Waist circumference",
+      "label": "Tailleomvang",
       "direction": "increases_risk",
       "importance": 0.16,
       "patient_value": "106",
@@ -74,19 +74,19 @@
     },
     {
       "id": "family_t2dm",
-      "label": "Family history of type 2 diabetes",
+      "label": "Familiegeschiedenis type 2 diabetes",
       "direction": "increases_risk",
       "importance": 0.14,
-      "patient_value": "mother",
+      "patient_value": "moeder",
       "unit": null,
       "note": "Background context; not something River can change."
     },
     {
       "id": "sleep",
-      "label": "Sleep regularity",
+      "label": "Slaap",
       "direction": "increases_risk",
       "importance": 0.12,
-      "patient_value": "irregular",
+      "patient_value": "onregelmatig",
       "unit": null,
       "note": "Patchy sleep as a lifestyle lever in this mock."
     }
@@ -95,22 +95,22 @@
     {
       "id": "activity-walks",
       "theme": "sport",
-      "title": "Build a walking rhythm",
-      "summary": "Ten-minute walks after two meals this week. Same shoes, same streets — make it easy to repeat.",
+      "title": "Bouw een wandelritme op",
+      "summary": "Deze week na twee maaltijden tien minuten wandelen. Dezelfde schoenen, dezelfde straat — makkelijk vol te houden.",
       "linked_factors": ["sports", "bmi", "waist"]
     },
     {
       "id": "food-pattern",
       "theme": "food",
-      "title": "Steady plates, fewer sugary drinks",
-      "summary": "Keep meals regular and swap one sugary drink a day for water or unsweetened tea. Small, not strict.",
+      "title": "Rustige maaltijden, minder suikerdrank",
+      "summary": "Houd je eettijden rustig en wissel één suikerdrankje per dag in voor water of ongezoete thee. Klein, niet streng.",
       "linked_factors": ["bmi", "waist"]
     },
     {
       "id": "sleep-wind-down",
       "theme": "sleep",
-      "title": "A calmer wind-down",
-      "summary": "Pick a lights-out window and park the phone in another room 30 minutes before. Sleep is a lifestyle lever, not a prescription.",
+      "title": "Een rustiger avondritueel",
+      "summary": "Kies een bedtijd en leg de telefoon 30 minuten eerder in een andere kamer. Slaap is een leefstijlknop, geen recept.",
       "linked_factors": ["sleep"]
     }
   ],
