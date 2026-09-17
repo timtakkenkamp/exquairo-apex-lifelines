@@ -223,12 +223,16 @@ class SimplifyTests(unittest.TestCase):
         self.assertIn("Slaap (uur per nacht)", app)
         self.assertIn("Suikerdranken per week", app)
         self.assertIn("whatif_reset", app)
+        self.assertIn("whatif_bmi", app)
+        self.assertIn("_sync_bmi_to_weight", app)
+        self.assertNotIn("st.number_input", app)
         self.assertNotIn('"Lengte"', app)
         self.assertNotIn("Lengte (cm)", app)
         css = (EXAMPLE_CONTRACT.parent / "styles.css").read_text(encoding="utf-8")
         self.assertIn("align-items: stretch", css)
         self.assertIn("buddy-tile-blurb", css)
         self.assertIn(".buddy-hero", css)
+        self.assertIn("Shared lever chrome so BMI matches", css)
         self.assertIn("Kleine stappen. Grote impact.", app)
         self.assertIn("buddy-audience-flag", app)
 
@@ -437,12 +441,12 @@ class SystemPromptTests(unittest.TestCase):
         self.assertNotIn("<strong>Hoe:</strong>", blob)
         slider_labels = [s.label for s in demo.slider]
         self.assertIn("Gewicht (kg)", slider_labels)
+        self.assertIn("BMI", slider_labels)
         self.assertIn("Taille (cm)", slider_labels)
         self.assertIn("Beweegminuten per week", slider_labels)
         self.assertIn("Slaap (uur per nacht)", slider_labels)
         self.assertIn("Suikerdranken per week", slider_labels)
         self.assertFalse(any("lengte" in (label or "").lower() for label in slider_labels))
-        self.assertFalse(any((s.label or "").strip() == "BMI" for s in demo.slider))
         self.assertFalse(any((n.label or "").strip() == "BMI" for n in demo.number_input))
         self.assertTrue(any(b.label == "Reset" for b in demo.button))
         for slider in demo.slider:
@@ -454,9 +458,12 @@ class SystemPromptTests(unittest.TestCase):
                 slider.set_value(120.0)
             elif slider.label == "Slaap (uur per nacht)":
                 slider.set_value(8.0)
+            elif slider.label == "BMI":
+                slider.set_value(28.0)
         demo.run()
         moved = {s.label: s.value for s in demo.slider}
         self.assertEqual(moved["Beweegminuten per week"], 200)
+        self.assertEqual(moved["BMI"], 28.0)
         reset = next(b for b in demo.button if b.label == "Reset")
         reset.click().run()
         restored = {s.label: s.value for s in demo.slider}
@@ -464,6 +471,7 @@ class SystemPromptTests(unittest.TestCase):
         self.assertEqual(restored["Suikerdranken per week"], 7)
         self.assertEqual(restored["Taille (cm)"], 106)
         self.assertEqual(restored["Slaap (uur per nacht)"], 5.5)
+        self.assertAlmostEqual(float(restored["BMI"]), 31.2, places=1)
         self.assertIn("Hoi Pietje", [t.value for t in demo.title])
 
     def test_empty_question_matches_chat_copy(self):

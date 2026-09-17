@@ -295,11 +295,21 @@ def _nudge_waist_with_weight(old_weight: float, new_weight: float) -> None:
 
 
 def _sync_weight_to_bmi() -> None:
-    """Derive BMI from gewicht + persona height; taille follows the 0.7 cm/kg track."""
+    """Keep the BMI slider in lockstep when gewicht moves; taille follows 0.7 cm/kg."""
     height_m = float(st.session_state.get("whatif_height_cm") or 170) / 100.0
     new_weight = float(st.session_state.whatif_weight)
     old_weight = float(st.session_state.get("_whatif_weight_for_waist") or new_weight)
     st.session_state.whatif_bmi = round(new_weight / (height_m**2), 1)
+    _nudge_waist_with_weight(old_weight, new_weight)
+    st.session_state._whatif_weight_for_waist = new_weight
+
+
+def _sync_bmi_to_weight() -> None:
+    """BMI is a patient lever too — same slider chrome as taille / beweeg / slaap."""
+    height_m = float(st.session_state.get("whatif_height_cm") or 170) / 100.0
+    new_weight = round(float(st.session_state.whatif_bmi) * (height_m**2), 1)
+    old_weight = float(st.session_state.get("_whatif_weight_for_waist") or new_weight)
+    st.session_state.whatif_weight = new_weight
     _nudge_waist_with_weight(old_weight, new_weight)
     st.session_state._whatif_weight_for_waist = new_weight
 
@@ -463,7 +473,7 @@ st.subheader("1. Je risico")
 st.markdown('<div class="buddy-whatif-flag" aria-hidden="true"></div>', unsafe_allow_html=True)
 with st.container(border=True):
     st.caption("Wat als je gewicht of leefstijl verandert?")
-    wcol, rcol = st.columns([4, 1.05], vertical_alignment="bottom")
+    wcol, bcol, rcol = st.columns([2.8, 2.6, 1.1], vertical_alignment="bottom")
     with wcol:
         st.slider(
             "Gewicht (kg)",
@@ -472,6 +482,17 @@ with st.container(border=True):
             step=0.5,
             key="whatif_weight",
             on_change=_sync_weight_to_bmi,
+        )
+    with bcol:
+        st.slider(
+            "BMI",
+            16.0,
+            50.0,
+            step=0.1,
+            format="%.1f",
+            key="whatif_bmi",
+            on_change=_sync_bmi_to_weight,
+            help="Volgt uit gewicht; zelf ook te schuiven. Lengte blijft vast.",
         )
     with rcol:
         if st.button("Reset", use_container_width=True):
