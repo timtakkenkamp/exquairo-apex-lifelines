@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from buddy_lib import persona_body
 from model_adapter import (
     FEATURE_COLS,
     MODEL_A_FILE,
@@ -97,14 +98,15 @@ def overlay_live_predictions(
 ) -> dict[str, Any]:
     """Return payload copy with risks/top_factors from live models."""
     updated = copy.deepcopy(payload)
+    body = persona_body(updated)
     patient = updated.get("patient") or {}
     persona_id = patient.get("persona_id")
     if not persona_id:
         raise ValueError("persona_id missing on payload")
 
     base = load_feature_snapshot(persona_id)
-    height_cm = float(patient.get("height_cm") or 170)
-    body_weight = float(weight_kg if weight_kg is not None else patient.get("weight_kg") or 75)
+    height_cm = float(patient.get("height_cm") or body["height_cm"] or 170)
+    body_weight = float(weight_kg if weight_kg is not None else body["weight_kg"])
     feats = features_with_weight(
         base, weight_kg=body_weight, height_cm=height_cm, waist_cm=waist_cm
     )
@@ -162,23 +164,20 @@ def overlay_live_predictions(
         snap["waist"] = f"{float(feats['WAIST_T1']):.0f} cm"
 
     base_bmi = float(base.get("BMI_T1") or new_bmi)
-    base_weight = base_bmi * height_m**2
     live_waist = None
     if feats.get("WAIST_T1") is not None:
         live_waist = float(feats["WAIST_T1"])
+    waist_changed = (
+        waist_cm is not None and abs(float(waist_cm) - body["waist_cm"]) >= 0.5
+    )
     updated["whatif"] = {
         "weight_kg": round(body_weight, 1),
         "bmi": round(new_bmi, 1),
         "height_cm": height_cm,
         "waist_cm": round(live_waist, 0) if live_waist is not None else None,
-        "delta_kg": round(body_weight - base_weight, 1),
-        "delta_bmi": round(new_bmi - base_bmi, 2),
-        "active": abs(body_weight - base_weight) >= 0.25
-        or (
-            waist_cm is not None
-            and live_waist is not None
-            and abs(live_waist - float(base.get("WAIST_T1") or live_waist)) >= 0.5
-        ),
+        "delta_kg": round(body_weight - body["weight_kg"], 1),
+        "delta_bmi": round(new_bmi - body["bmi"], 2),
+        "active": abs(body_weight - body["weight_kg"]) >= 0.25 or waist_changed,
         "mode": "live_model",
     }
     updated["live_model"] = {

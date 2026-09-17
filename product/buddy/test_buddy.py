@@ -291,12 +291,17 @@ class FinalModelOverlayTests(unittest.TestCase):
         for payload in load_personas():
             live = overlay_live_predictions(payload)
             body = persona_body(payload)
+            live_rest = overlay_live_predictions(
+                payload, weight_kg=body["weight_kg"], waist_cm=body["waist_cm"]
+            )
             live_waist = overlay_live_predictions(
                 payload, waist_cm=body["waist_cm"] + 8
             )
             self.assertEqual(live["source"], "live_final_models")
             self.assertEqual(live_waist["source"], "live_final_models")
             self.assertIsNotNone((live_waist.get("whatif") or {}).get("waist_cm"))
+            self.assertFalse(live_rest["whatif"]["active"])
+            self.assertTrue(live_waist["whatif"]["active"])
             self.assertTrue(live["live_model"]["model_a"].endswith("run1_final.joblib"))
             self.assertTrue(live["live_model"]["model_b"].endswith("run1_final.joblib"))
             self.assertEqual(len(live["risks"]), 2)
