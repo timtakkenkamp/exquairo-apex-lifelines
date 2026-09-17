@@ -103,16 +103,24 @@ _MEDICAL_RE = re.compile(
     r"metformin|insulin|ozempic|wegovy|semaglutide|statin\w*|glp-?1|"
     r"diagnos\w*|diabetic|do i have|am i sick|"
     r"triage|emergenc\w*|chest pain|ambulance|a&e|er visit|hospital|"
-    r"blood test result|lab result|treat my|cure|symptom\w*"
+    r"blood test result|lab result|treat my|cure|symptom\w*|"
+    # Dutch
+    r"medicijn\w*|geneesmiddel\w*|voorschrijf\w*|voorschrift|"
+    r"apotheek|dosering|pilletje\w*|tabletten|"
+    r"diagnose\w*|heb ik diabetes|ben ik ziek|"
+    r"spoed|ambulance|hartklacht\w*|pijn op de borst|"
+    r"bloeduitslag|labuitslag|kuur|symptoom\w*|klachten|"
+    r"negeer (je|alle) (regels|instructies)|jailbreak|DAN mode|"
+    r"ignore (your|all) (rules|instructions)|system prompt"
     r")\b",
     re.IGNORECASE,
 )
 
 DEFLECT_MESSAGE = (
-    "I am a lifestyle buddy, not a clinician. I cannot diagnose, prescribe, "
-    "or triage. Please take questions about medications, test results, or "
-    "symptoms to your care provider. I can still help with everyday movement, "
-    "meals, sleep, smoking, and alcohol habits."
+    "Ik ben een leefstijl-buddy, geen zorgverlener. Ik mag niet diagnosticeren, "
+    "medicatie adviseren of triëren. Vragen over medicijnen, uitslagen of "
+    "klachten horen bij je arts of praktijkondersteuner. Wel kan ik helpen "
+    "met beweging, eten, slapen, roken en alcohol."
 )
 
 
@@ -121,7 +129,11 @@ def load_payload(path: Path) -> dict[str, Any]:
 
 
 def load_personas() -> list[dict[str, Any]]:
-    paths = sorted(FIXTURES_DIR.glob("persona-*.json"))
+    # Skip persona-*-features.json (model feature snapshots for live overlay)
+    paths = sorted(
+        path for path in FIXTURES_DIR.glob("persona-*.json")
+        if not path.name.endswith("-features.json")
+    )
     if not paths:
         return [load_payload(EXAMPLE_CONTRACT)]
     return [load_payload(p) for p in paths]
@@ -418,11 +430,26 @@ def optional_llm_reply(question: str, payload: dict[str, Any], fallback: str) ->
         return fallback, "template"
 
 
+
+_MEDICAL_ADVICE_OUT = re.compile(
+    r"\b(take|start|stop|dose|mg\b|prescribe|diagnos|"
+    r"neem\b|dosering|voorschrijf|diagnose|metformin|insulin)\b",
+    re.IGNORECASE,
+)
+
+
+def _looks_like_medical_advice(text: str) -> bool:
+    return bool(_MEDICAL_ADVICE_OUT.search(text or ""))
+
+
 def answer_question(question: str, payload: dict[str, Any]) -> tuple[str, str]:
     text = (question or "").strip()
     if not text:
-        return "Ask about a daily habit — walking, meals, sleep, smoking, or alcohol.", "empty"
+        return "Stel een vraag over een dagelijkse gewoonte — wandelen, eten, slapen, roken of alcohol.", "empty"
     if is_medical_or_triage(text):
         return DEFLECT_MESSAGE, "guardrail"
     fallback = template_reply(text, payload)
-    return optional_llm_reply(text, payload, fallback)
+    reply, source = optional_llm_reply(text, payload, fallback)
+    if source == "openai" and _looks_like_medical_advice(reply):
+        return DEFLECT_MESSAGE, "guardrail-post"
+    return reply, source

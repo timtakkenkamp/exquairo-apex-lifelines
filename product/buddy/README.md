@@ -58,3 +58,10 @@ Do not push this playground to `kyliekeijzer/exquairo-apex-lifelines`.
 ## Live models (stap 3)
 
 Sidebar toggle **Live model (Kylie A/B)** uses `models/model_{a,b}_best_logreg_elasticnet.joblib` via `live_model.py` + `model_adapter.py`. Persona feature snapshots live in `fixtures/persona-*-features.json`. Toggle off = mock fixtures.
+
+## Stap 4 — coaching API + guardrails
+
+- Strengere NL/EN medical + jailbreak guardrails (pre + post LLM).
+- Thin FastAPI bridge: `uv run uvicorn product.buddy.api:app --app-dir product/buddy --port 8080`
+  - `GET /health`, `GET /personas`, `POST /predict`, `POST /ask`
+- Demo video: `product/buddy/demo/boris-buddy-demo.mp4`
