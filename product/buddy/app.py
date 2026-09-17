@@ -57,13 +57,24 @@ st.set_page_config(
 
 def audience_mode() -> bool:
     """Zaalweergave via ?demo=1 — hides workshop controls, keeps the 3-step UI."""
+    tokens: list[str] = []
     try:
         raw = st.query_params.get("demo", "")
+        if isinstance(raw, list):
+            raw = raw[0] if raw else ""
+        tokens.append(str(raw))
     except Exception:
-        raw = ""
-    if isinstance(raw, list):
-        raw = raw[0] if raw else ""
-    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+        pass
+    try:
+        from urllib.parse import parse_qs, urlparse
+
+        url = str(getattr(st.context, "url", "") or "")
+        tokens.append((parse_qs(urlparse(url).query).get("demo") or [""])[0])
+        if "demo=1" in url.lower() or "demo=true" in url.lower():
+            tokens.append("1")
+    except Exception:
+        pass
+    return any(str(token).strip().lower() in {"1", "true", "yes", "on"} for token in tokens)
 
 
 AUDIENCE = audience_mode()
