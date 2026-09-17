@@ -442,6 +442,8 @@ class SystemPromptTests(unittest.TestCase):
         self.assertIn("Slaap (uur per nacht)", slider_labels)
         self.assertIn("Suikerdranken per week", slider_labels)
         self.assertFalse(any("lengte" in (label or "").lower() for label in slider_labels))
+        self.assertFalse(any((s.label or "").strip() == "BMI" for s in demo.slider))
+        self.assertFalse(any((n.label or "").strip() == "BMI" for n in demo.number_input))
         self.assertTrue(any(b.label == "Reset" for b in demo.button))
         for slider in demo.slider:
             if slider.label == "Beweegminuten per week":
