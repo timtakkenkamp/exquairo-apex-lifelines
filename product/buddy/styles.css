@@ -1,12 +1,164 @@
-/* Boris: soft sky, rounded cards, sprout accent */
+/* Boris: soft sky + sprout atmosphere, rounded cards */
 .stApp {
-  background: linear-gradient(180deg, #eaf4fb 0%, #f4faf6 72%, #ffffff 100%);
+  background:
+    radial-gradient(980px 540px at 4% -14%, rgba(61, 139, 191, 0.30), transparent 64%),
+    radial-gradient(820px 460px at 98% -10%, rgba(126, 217, 87, 0.20), transparent 60%),
+    radial-gradient(680px 300px at 36% -4%, rgba(255, 255, 255, 0.78), transparent 70%),
+    radial-gradient(440px 240px at 86% 16%, rgba(111, 191, 75, 0.10), transparent 72%),
+    radial-gradient(380px 220px at 12% 28%, rgba(61, 139, 191, 0.08), transparent 74%),
+    linear-gradient(180deg, #c8e2f4 0%, #e3f1fb 20%, #eef8f5 56%, #f7fcf9 82%, #ffffff 100%) !important;
+}
+
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+.stMain,
+section.main,
+.main {
+  background: transparent !important;
+}
+
+.stApp::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.16;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.05' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E");
+}
+
+.stApp::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(520px 190px at 26% 0%, rgba(255, 255, 255, 0.50), transparent 72%),
+    radial-gradient(340px 150px at 90% 4%, rgba(126, 217, 87, 0.10), transparent 70%);
 }
 
 .block-container {
-  padding-top: 1rem;
+  position: relative;
+  z-index: 1;
+  padding-top: 1.2rem;
   padding-bottom: 2.4rem;
   max-width: 1120px;
+}
+
+.buddy-hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  margin: 0.1rem 0 0.95rem;
+  padding: 0.95rem 1.4rem 1rem 1.05rem;
+  border-radius: 32px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.92) 0%,
+      rgba(234, 244, 251, 0.58) 58%,
+      rgba(244, 250, 246, 0.42) 100%
+    );
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  box-shadow:
+    0 20px 44px rgba(26, 74, 110, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px) saturate(1.12);
+}
+
+.buddy-hero::after {
+  content: "";
+  position: absolute;
+  left: 1.15rem;
+  right: 1.15rem;
+  bottom: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(61, 139, 191, 0.38),
+    rgba(111, 191, 75, 0.26),
+    transparent 88%
+  );
+}
+
+.buddy-hero-mark {
+  flex: 0 0 auto;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.98), rgba(216, 234, 246, 0.62));
+  box-shadow:
+    0 12px 24px rgba(61, 139, 191, 0.14),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.85);
+}
+
+.buddy-hero-face {
+  width: 70px;
+  height: auto;
+  display: block;
+}
+
+.buddy-hero-fallback {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 36%, #eaf4fb 0 36%, #3d8bbf 38% 100%);
+}
+
+.buddy-hero-copy {
+  min-width: 0;
+}
+
+.buddy-hero-kicker {
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #3d8bbf;
+  font-weight: 700;
+  margin-bottom: 0.18rem;
+}
+
+.buddy-hero-line {
+  font-size: 1.62rem;
+  font-weight: 750;
+  color: #1a4a6e;
+  letter-spacing: -0.03em;
+  line-height: 1.18;
+}
+
+@media (max-width: 640px) {
+  .buddy-hero {
+    gap: 0.85rem;
+    padding: 0.85rem 1rem 0.9rem 0.85rem;
+    border-radius: 26px;
+  }
+
+  .buddy-hero-mark {
+    width: 76px;
+    height: 76px;
+  }
+
+  .buddy-hero-face,
+  .buddy-hero-fallback {
+    width: 58px;
+  }
+
+  .buddy-hero-fallback {
+    height: 58px;
+  }
+
+  .buddy-hero-line {
+    font-size: 1.28rem;
+  }
 }
 
 .block-container h2,

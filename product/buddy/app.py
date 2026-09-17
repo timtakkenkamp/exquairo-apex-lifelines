@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 from pathlib import Path
 
 import streamlit as st
@@ -103,46 +104,36 @@ def personas() -> list[dict]:
     return [by_id[pid] for pid in PERSONA_ORDER if pid in by_id]
 
 
+def _mascot_data_uri() -> str:
+    if not MASCOT_FILE.exists():
+        return ""
+    encoded = base64.b64encode(MASCOT_FILE.read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
 def render_header(*, audience: bool = False) -> None:
-    left, right = st.columns([1, 4])
-    with left:
-        if MASCOT_FILE.exists():
-            st.image(str(MASCOT_FILE), width=96)
-        else:
-            st.markdown(
-                """
-<div style="width:92px;height:108px;border-radius:28px;background:#3D8BBF;position:relative;box-shadow:0 8px 18px rgba(61,139,191,0.25);">
-  <div style="position:absolute;top:-10px;left:36px;width:10px;height:22px;background:#6FBF4B;border-radius:8px;"></div>
-  <div style="position:absolute;top:6px;left:18px;width:22px;height:14px;background:#7ED957;border-radius:10px 2px;"></div>
-  <div style="position:absolute;top:6px;right:18px;width:22px;height:14px;background:#7ED957;border-radius:2px 10px;"></div>
-  <div style="position:absolute;top:32px;left:12px;right:12px;height:36px;background:#EAF4FB;border-radius:16px;"></div>
-  <div style="position:absolute;top:42px;left:28px;width:10px;height:10px;background:#1A4A6E;border-radius:50%;"></div>
-  <div style="position:absolute;top:42px;right:28px;width:10px;height:10px;background:#1A4A6E;border-radius:50%;"></div>
+    uri = _mascot_data_uri()
+    if uri:
+        face = f'<img class="buddy-hero-face" src="{uri}" alt="Boris" />'
+    else:
+        face = '<div class="buddy-hero-face buddy-hero-fallback" aria-hidden="true"></div>'
+    kicker = (
+        '<div class="buddy-hero-kicker">Boris</div>'
+        if audience
+        else '<div class="buddy-hero-kicker">Met Boris</div>'
+    )
+    st.markdown(
+        f"""
+<div class="buddy-hero">
+  <div class="buddy-hero-mark">{face}</div>
+  <div class="buddy-hero-copy">
+    {kicker}
+    <div class="buddy-hero-line">Kleine stappen. Grote impact.</div>
+  </div>
 </div>
 """,
-                unsafe_allow_html=True,
-            )
-            st.caption("Zet later `assets/boris-mascot.png` hier.")
-    with right:
-        if audience:
-            st.markdown(
-                """
-<div style="padding-top:18px;">
-  <div style="font-size:1.35rem;font-weight:750;color:#1A4A6E;line-height:1.25;">Kleine stappen. Grote impact.</div>
-</div>
-""",
-                unsafe_allow_html=True,
-            )
-        else:
-            st.markdown(
-                """
-<div style="padding-top:12px;">
-  <div style="font-size:0.78rem;letter-spacing:0.08em;text-transform:uppercase;color:#3D8BBF;font-weight:700;">Met Boris</div>
-  <div style="font-size:1.35rem;font-weight:750;color:#1A4A6E;line-height:1.25;">Kleine stappen. Grote impact.</div>
-</div>
-""",
-                unsafe_allow_html=True,
-            )
+        unsafe_allow_html=True,
+    )
 
 
 def render_risk(risk: dict, short_title: str) -> None:
