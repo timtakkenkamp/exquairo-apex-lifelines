@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import unittest
 
+from intervention_pages import get_intervention_page
 from buddy_lib import (
     DEFLECT_MESSAGE,
     EXAMPLE_CONTRACT,
@@ -74,6 +75,28 @@ class WhatIfTests(unittest.TestCase):
         self.assertAlmostEqual(same["risks"][0]["risk_score"], 0.48, places=3)
         self.assertAlmostEqual(same["risks"][1]["risk_score"], 0.67, places=3)
         self.assertFalse(same["whatif"]["active"])
+
+
+class InterventionPageTests(unittest.TestCase):
+    def test_movement_page_is_a_groningen_walk(self):
+        page = get_intervention_page("sport")
+        blob = " ".join(
+            [
+                page["title"],
+                page["coach"],
+                page["why"],
+                page["when"],
+                page["duration"],
+                *page["route_steps"],
+            ]
+        ).lower()
+        self.assertIn("noorderplantsoen", blob)
+        self.assertIn("martini", blob)
+        self.assertIn("groningen", page["kicker"].lower())
+        self.assertIn("30", page["duration"])
+        self.assertTrue(any("hb" in page["why"].lower() or "risico" in page["why"].lower() for _ in [0]))
+        food = get_intervention_page("food")
+        self.assertIn("stub", food["kicker"].lower())
 
 
 class CopyTests(unittest.TestCase):

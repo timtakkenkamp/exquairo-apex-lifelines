@@ -53,7 +53,7 @@ BMI direction flips at 25: below → **verlaagt je risico op diabetes**, at/abov
 | --- | --- | --- |
 | Short- / long-term diabetes % | Persona JSON + weight what-if heuristic | Model probabilities (same two cards) |
 | Top factors | Hardcoded local importances; BMI/waist move with the what-if | Patient-specific attributions from the team model |
-| Intervention cards | Curated lifestyle library | Same cards, mapped from factor ids |
+| Intervention cards | Clickable; Movement opens a Groningen walk | Same cards, mapped from factor ids |
 | Coaching note | Template (optional OpenAI) | Same contract field |
 | Ask-your-buddy | Guardrails + templates | Same rules; still no prescribing |
 
@@ -63,7 +63,8 @@ The UI reads `product/buddy/fixtures/persona-*.json`. `contract.example.json` is
 
 | File | Role |
 | --- | --- |
-| `app.py` | Streamlit UI |
+| `app.py` | Streamlit UI (home + session-state detail views) |
+| `intervention_pages.py` | Movement (Groningen walk) + Food/Sleep stubs |
 | `buddy_lib.py` | Loader, validation, coaching, guardrails |
 | `styles.css` | Theme tokens (sport / food / sleep / smoking / alcohol) |
 | `fixtures/` | River, Sam, Noor mocks |

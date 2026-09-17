@@ -15,7 +15,7 @@ Patient-facing outcomes for every persona:
 - **Story:** Higher weight, little reported sport, mother with type 2 diabetes, patchy sleep.
 - **Mock risks:** short-term 48% medium · long-term 67% high
 - **Local factors:** BMI, weinig beweging, taille, familie T2DM, slaap (allen **verhoogt je risico op diabetes** in deze mock)
-- **Cards:** walking (sport / green-blue), steadier plates (food / coral), calmer wind-down (sleep / indigo)
+- **Cards:** walking (sport / green-blue) opens a **Groningen Plantsoen–gracht–Martini-lus**; food and sleep have stub detail pages
 - **What-if:** weight/BMI sliders move both risk cards plus the BMI and waist bars
 - **Payloads:** `fixtures/persona-river.json` and `contract.example.json`
 

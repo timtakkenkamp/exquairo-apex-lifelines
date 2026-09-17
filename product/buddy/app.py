@@ -20,6 +20,7 @@ from buddy_lib import (
     risk_band_nl,
     validate_payload,
 )
+from intervention_pages import get_intervention_page
 
 PERSONA_ORDER = ["persona-river", "persona-sam", "persona-noor"]
 
@@ -135,6 +136,44 @@ def render_intervention(item: dict, factor_labels: dict[str, str]) -> None:
     )
 
 
+def render_detail_page(theme: str, patient_name: str) -> None:
+    page = get_intervention_page(theme)
+    colors = THEME_COLORS.get(theme, THEME_COLORS["sport"])
+    if st.button("← Terug naar je leefstijlbeeld", key="back_home"):
+        st.session_state.buddy_view = "home"
+        st.session_state.detail_theme = None
+        st.rerun()
+    st.caption(page["kicker"])
+    st.title(page["title"])
+    st.markdown(
+        f"""
+<div style="background:linear-gradient(180deg,{colors["soft"]},#fffdf8 50%);border:1px solid #e4ddd0;border-left:7px solid {colors["bar"]};border-radius:16px;padding:16px 18px;margin:0 0 1rem 0;">
+  <div style="font-size:0.78rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:{colors["ink"]};margin-bottom:6px;">Voorstel voor {patient_name}</div>
+  <div style="color:#1c2a25;font-size:1.05rem;line-height:1.5;">{page["coach"]}</div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+    st.subheader("Waarom dit past bij je risico-beeld")
+    st.write(page["why"])
+    st.caption("Leefstijlcoaching, geen medicijn en geen triage. Medische vragen horen bij je zorgverlener.")
+    st.subheader(page["route_name"])
+    for i, step in enumerate(page.get("route_steps") or [], start=1):
+        st.markdown(f"**{i}.** {step}")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown("**Wanneer**")
+        st.write(page["when"])
+    with c2:
+        st.markdown("**Hoe lang**")
+        st.write(page["duration"])
+    with c3:
+        st.markdown("**Hoe intens**")
+        st.write(page["intensity"])
+    if page.get("tip"):
+        st.info(page["tip"])
+
+
 def _sync_weight_to_bmi() -> None:
     height_m = float(st.session_state.get("whatif_height_cm") or 170) / 100.0
     weight = float(st.session_state.whatif_weight)
@@ -173,6 +212,8 @@ with st.sidebar:
     if persona_changed:
         st.session_state.chat = []
         st.session_state.chat_persona = persona_id
+        st.session_state.buddy_view = "home"
+        st.session_state.detail_theme = None
 
     patient = baseline["patient"]
     st.markdown(f"**{patient['display_name']}**, {patient.get('age', '—')}")
@@ -197,6 +238,10 @@ payload = apply_weight_whatif(
 )
 patient = payload["patient"]
 whatif = payload.get("whatif") or {}
+
+if st.session_state.get("buddy_view") == "detail":
+    render_detail_page(st.session_state.get("detail_theme") or "sport", patient["display_name"])
+    st.stop()
 
 st.caption("ELEKTRONISCHE BUDDY · DEMO")
 st.title(f"Hoi {patient['display_name']} — hier is jouw leefstijlbeeld")
@@ -284,11 +329,18 @@ st.caption(
     "Alleen leefstijl. Kleuren: beweging = groen/blauw, voeding = oranje/koraal, "
     "slaap = indigo, rookvrij = paars, alcohol = amber."
 )
+st.caption("Tik een kaart voor een concreet voorstel — Beweging opent een Groninger wandellus.")
 factor_labels = {f["id"]: factor_display_label(f) for f in payload["top_factors"]}
 ix_cols = st.columns(len(payload["interventions"]))
 for col, item in zip(ix_cols, payload["interventions"]):
     with col:
         render_intervention(item, factor_labels)
+        theme = item.get("theme") or "sport"
+        cta = "Open wandelvoorstel" if theme == "sport" else "Open dit voorstel"
+        if st.button(cta, key=f"open_{item.get('id', theme)}", use_container_width=True):
+            st.session_state.buddy_view = "detail"
+            st.session_state.detail_theme = theme
+            st.rerun()
 
 st.subheader("A note from your buddy")
 note = (payload.get("coaching") or {}).get("template", "")
