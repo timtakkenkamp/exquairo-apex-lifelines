@@ -54,3 +54,7 @@ uv run python product/buddy/test_buddy.py
 ```
 
 Do not push this playground to `kyliekeijzer/exquairo-apex-lifelines`.
+
+## Live models (stap 3)
+
+Sidebar toggle **Live model (Kylie A/B)** uses `models/model_{a,b}_best_logreg_elasticnet.joblib` via `live_model.py` + `model_adapter.py`. Persona feature snapshots live in `fixtures/persona-*-features.json`. Toggle off = mock fixtures.

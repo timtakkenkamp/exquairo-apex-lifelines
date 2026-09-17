@@ -22,6 +22,7 @@ from buddy_lib import (
     validate_payload,
 )
 from intervention_pages import get_intervention_page
+from live_model import models_available, overlay_live_predictions
 
 PERSONA_ORDER = ["persona-river", "persona-sam", "persona-noor"]
 ASSETS = Path(__file__).resolve().parent / "assets"
@@ -204,6 +205,13 @@ by_id = {p["patient"]["persona_id"]: p for p in payloads}
 
 with st.sidebar:
     st.markdown("### Boris")
+    use_live_default = models_available()
+    use_live = st.toggle(
+        "Live model (Kylie A/B)",
+        value=use_live_default,
+        help="Aan: voorspellingen uit joblib A/B. Uit: mock fixtures.",
+        disabled=not use_live_default,
+    )
     st.caption("Small steps. Big impact.")
     st.markdown("**Wie ben jij?**")
     persona_id = st.radio(
@@ -229,7 +237,14 @@ with st.sidebar:
     patient = baseline["patient"]
     st.caption(f"{patient['display_name']}, {patient.get('age', '—')} · start {body['weight_kg']:.0f} kg")
 
-payload = apply_weight_whatif(baseline, weight_kg=float(st.session_state.whatif_weight))
+if use_live:
+    payload = overlay_live_predictions(
+        baseline, weight_kg=float(st.session_state.whatif_weight)
+    )
+else:
+    payload = apply_weight_whatif(
+        baseline, weight_kg=float(st.session_state.whatif_weight)
+    )
 patient = payload["patient"]
 
 if st.session_state.get("buddy_view") == "detail":
@@ -253,7 +268,14 @@ with rcol:
         st.session_state.whatif_reset = True
         st.rerun()
 
-payload = apply_weight_whatif(baseline, weight_kg=float(st.session_state.whatif_weight))
+if use_live:
+    payload = overlay_live_predictions(
+        baseline, weight_kg=float(st.session_state.whatif_weight)
+    )
+else:
+    payload = apply_weight_whatif(
+        baseline, weight_kg=float(st.session_state.whatif_weight)
+    )
 patient = payload["patient"]
 whatif = payload.get("whatif") or {}
 if whatif.get("active"):
@@ -265,7 +287,10 @@ with c1:
     render_risk(risks["t1_t2"], "Korte termijn")
 with c2:
     render_risk(risks["t1_t3"], "Lange termijn")
-st.caption("Klein lettertje: demo-proxy is kans dat HbA1c boven 6,5% uitkomt. Geen diagnose.")
+if use_live:
+    st.caption("Live Kylie-modellen A/B (elastic-net). Proxy diabetes / HbA1c > 6,5%. Geen diagnose.")
+else:
+    st.caption("Mock-cijfers. Klein lettertje: kans dat HbA1c boven 6,5% uitkomt. Geen diagnose.")
 
 # 2) Waarom jij — max 3
 st.subheader("2. Waarom jij")
