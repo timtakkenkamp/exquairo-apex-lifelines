@@ -50,6 +50,8 @@ De vragenbox **Vraag het Boris** gebruikt `gpt-4o-mini` zodra er een sleutel is.
 
 Zonder sleutel blijft de demo werken met vaste Nederlandse teksten. Medische vragen worden nog steeds geweigerd voordat OpenAI wordt aangeroepen.
 
+De system prompt staat in `prompts/boris_system.md` (Barbecue Bob-stijl: rol, toon, grenzen, voorbeelden). Per vraag plakt de app de actuele demo-kaart (risico’s, factoren, tegels) op `{SESSIE_CONTEXT}`. In de sidebar zit een dichte expander **System prompt (demo)** om te itereren, plus **Herstel default**. Dat is voor ons, niet voor de patiënt. Regex-guardrails blijven de harde deur.
+
 ## What-if formula
 
 ```

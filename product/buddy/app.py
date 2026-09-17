@@ -7,12 +7,14 @@ from pathlib import Path
 import streamlit as st
 
 from buddy_lib import (
+    CHAT_PLACEHOLDER,
     OPENAI_MODEL,
     THEME_META,
     answer_question,
     apply_weight_whatif,
     factor_direction_nl,
     factor_display_label,
+    load_default_system_prompt,
     load_personas,
     openai_key_configured,
     pct,
@@ -286,6 +288,19 @@ with st.sidebar:
             help="Zelfde patroon als eerdere opdracht: plak hier, of zet OPENAI_API_KEY in .streamlit/secrets.toml. Wordt niet gecommit.",
         )
         st.caption("Of: omgeving OPENAI_API_KEY, of kopieer secrets.toml.example naar secrets.toml.")
+    if "system_prompt" not in st.session_state:
+        st.session_state.system_prompt = load_default_system_prompt()
+    if st.session_state.pop("system_prompt_reset", False):
+        st.session_state.system_prompt = load_default_system_prompt()
+    with st.expander("System prompt (demo)", expanded=False):
+        st.caption(
+            "Zoals bij Barbecue Bob: vaste rol-instructie voor OpenAI. "
+            "Patiënten zien dit niet in de hoofdchat. Sessie-context van Pietje/Sam/Noor wordt eronder geplakt."
+        )
+        st.text_area("System prompt", key="system_prompt", height=280)
+        if st.button("Herstel default"):
+            st.session_state.system_prompt_reset = True
+            st.rerun()
 
 openai_key = resolve_openai_api_key(
     st.session_state.get("openai_api_key"),
@@ -372,12 +387,16 @@ if openai_key:
 else:
     st.caption("Geen API-sleutel. Plak er een in de sidebar — tot die tijd vaste teksten.")
 with st.form("ask_buddy", clear_on_submit=True):
-    question = st.text_input("Je vraag", placeholder="Wandelen, eten, slapen…")
+    question = st.text_input("Je vraag", placeholder=CHAT_PLACEHOLDER)
     asked = st.form_submit_button("Vraag")
 if asked:
     history = [(prev_q, prev_a) for prev_q, prev_a, _src in st.session_state.chat]
     reply, source = answer_question(
-        question, payload, api_key=openai_key, history=history
+        question,
+        payload,
+        api_key=openai_key,
+        history=history,
+        system_prompt=st.session_state.get("system_prompt"),
     )
     st.session_state.chat.append((question, reply, source))
 for q, reply, source in st.session_state.chat:

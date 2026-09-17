@@ -12,6 +12,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent
 FIXTURES_DIR = ROOT / "fixtures"
 EXAMPLE_CONTRACT = ROOT / "contract.example.json"
+SYSTEM_PROMPT_FILE = ROOT / "prompts" / "boris_system.md"
+SESSIE_CONTEXT_TOKEN = "{SESSIE_CONTEXT}"
 
 RISK_ORDER = {"low": 0, "medium": 1, "high": 2}
 
@@ -119,6 +121,11 @@ DEFLECT_MESSAGE = (
     "medicatie adviseren of triëren. Vragen over medicijnen, uitslagen of "
     "klachten horen bij je arts of praktijkondersteuner. Wel kan ik helpen "
     "met beweging, eten, slapen, roken en alcohol."
+)
+CHAT_TOPICS = "wandelen, eten, slapen, roken of alcohol"
+CHAT_PLACEHOLDER = "Wandelen, eten, slapen, roken, alcohol…"
+EMPTY_QUESTION_MESSAGE = (
+    f"Stel een vraag over een dagelijkse gewoonte — {CHAT_TOPICS}."
 )
 
 
@@ -470,40 +477,67 @@ def openai_key_configured(*candidates: str | None) -> bool:
     return bool(resolve_openai_api_key(*candidates))
 
 
-def _coach_system_prompt(payload: dict[str, Any]) -> str:
+def load_default_system_prompt() -> str:
+    return SYSTEM_PROMPT_FILE.read_text(encoding="utf-8")
+
+
+def build_session_context(payload: dict[str, Any]) -> str:
+    """Facts-only block for the current persona / what-if / tiles."""
     patient = payload.get("patient") or {}
     name = patient.get("display_name") or "daar"
+    persona_id = patient.get("persona_id") or ""
+    source = payload.get("source") or "mock"
     risks = {r.get("id"): r for r in payload.get("risks") or []}
     short = risks.get("t1_t2") or {}
     longr = risks.get("t1_t3") or {}
-    factor_lines = []
-    for factor in top_local_factors(payload, 3):
-        factor_lines.append(
-            f"- {factor_display_label(factor)}: {factor_direction_nl(factor.get('direction'))}"
-        )
-    primary = pick_primary_intervention(payload)
-    step = (
-        f"{primary['title']}: {primary.get('summary') or ''}"
-        if primary
-        else "Een kleine leefstijlstap die je kunt herhalen."
+    factor_lines = [
+        f"- {factor_display_label(factor)}: {factor_direction_nl(factor.get('direction'))}"
+        for factor in top_local_factors(payload, 3)
+    ] or ["- (geen lokale factoren)"]
+    tile_lines = [
+        f"- {item.get('title')}"
+        for item in interventions_for_local_factors(payload, 3)
+    ] or ["- (geen tegels)"]
+    whatif = payload.get("whatif") or {}
+    weight = whatif.get("weight_kg", patient.get("weight_kg"))
+    bmi = whatif.get("bmi", patient.get("bmi"))
+    if weight is not None and bmi is not None:
+        whatif_line = f"What-if: {float(weight):.1f} kg · BMI {float(bmi):.1f}"
+    else:
+        whatif_line = "What-if: (geen gewicht)"
+    disclaimer = payload.get("disclaimer") or "Demo-proxy, geen diagnose."
+    return "\n".join(
+        [
+            f"Persona: {name} ({persona_id})",
+            f"Bron: {source}",
+            f"Korte termijn: {pct(short.get('risk_score') or 0)} "
+            f"({risk_band_nl(short.get('risk_label') or 'medium')})",
+            f"Lange termijn: {pct(longr.get('risk_score') or 0)} "
+            f"({risk_band_nl(longr.get('risk_label') or 'medium')})",
+            "Waarom jij:",
+            *factor_lines,
+            "Doe dit:",
+            *tile_lines,
+            whatif_line,
+            f"Disclaimer: {disclaimer}",
+        ]
     )
-    return (
-        "Je bent Boris, een kalme leefstijl-buddy in een demo-app.\n"
-        "Antwoord altijd in het Nederlands, in 2–4 korte zinnen. Warm, niet overdreven.\n"
-        "Nooit diagnosticeren, medicatie adviseren, doseren of triëren.\n"
-        "Bij medicijnen, uitslagen, symptomen of spoed: verwijs naar de arts "
-        "of praktijkondersteuner en geef geen dosering.\n"
-        "Alleen coaching over beweging, eten, slapen, roken en alcohol.\n"
-        "Cijfers hier zijn een demo-proxy, geen diagnose.\n"
-        f"Patiënt in deze demo: {name}.\n"
-        f"Korte-termijn risico: {pct(short.get('risk_score') or 0)} "
-        f"({risk_band_nl(short.get('risk_label') or 'medium')}).\n"
-        f"Lange-termijn risico: {pct(longr.get('risk_score') or 0)} "
-        f"({risk_band_nl(longr.get('risk_label') or 'medium')}).\n"
-        "Waarom deze persoon:\n"
-        + ("\n".join(factor_lines) or "- (geen lokale factoren)")
-        + f"\nEerste stap die de app voorstelt: {step}\n"
-    )
+
+
+def render_system_prompt(
+    payload: dict[str, Any],
+    template: str | None = None,
+) -> str:
+    """Static character prompt + current demo card. Barbecue Bob split."""
+    raw = template.strip() if template and template.strip() else load_default_system_prompt()
+    context = build_session_context(payload)
+    if SESSIE_CONTEXT_TOKEN in raw:
+        return raw.replace(SESSIE_CONTEXT_TOKEN, context)
+    return raw.rstrip() + "\n\n## Sessie-context\n\n" + context
+
+
+def _coach_system_prompt(payload: dict[str, Any], template: str | None = None) -> str:
+    return render_system_prompt(payload, template)
 
 
 def optional_llm_reply(
@@ -513,6 +547,7 @@ def optional_llm_reply(
     *,
     api_key: str | None = None,
     history: list[tuple[str, str]] | None = None,
+    system_prompt: str | None = None,
 ) -> tuple[str, str]:
     """Return (text, source). Uses the official OpenAI client when a key is present."""
     key = resolve_openai_api_key(api_key)
@@ -524,7 +559,9 @@ def optional_llm_reply(
     except ImportError:
         return fallback, "template"
 
-    messages: list[dict[str, str]] = [{"role": "system", "content": _coach_system_prompt(payload)}]
+    messages: list[dict[str, str]] = [
+        {"role": "system", "content": render_system_prompt(payload, system_prompt)}
+    ]
     for prior_q, prior_a in (history or [])[-6:]:
         if prior_q:
             messages.append({"role": "user", "content": prior_q})
@@ -565,15 +602,21 @@ def answer_question(
     *,
     api_key: str | None = None,
     history: list[tuple[str, str]] | None = None,
+    system_prompt: str | None = None,
 ) -> tuple[str, str]:
     text = (question or "").strip()
     if not text:
-        return "Stel een vraag over een dagelijkse gewoonte — wandelen, eten, slapen, roken of alcohol.", "empty"
+        return EMPTY_QUESTION_MESSAGE, "empty"
     if is_medical_or_triage(text):
         return DEFLECT_MESSAGE, "guardrail"
     fallback = template_reply(text, payload)
     reply, source = optional_llm_reply(
-        text, payload, fallback, api_key=api_key, history=history
+        text,
+        payload,
+        fallback,
+        api_key=api_key,
+        history=history,
+        system_prompt=system_prompt,
     )
     if source == "openai" and _looks_like_medical_advice(reply):
         return DEFLECT_MESSAGE, "guardrail-post"
