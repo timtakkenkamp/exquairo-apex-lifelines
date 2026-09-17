@@ -7,15 +7,18 @@ from pathlib import Path
 import streamlit as st
 
 from buddy_lib import (
+    OPENAI_MODEL,
     THEME_META,
     answer_question,
     apply_weight_whatif,
     factor_direction_nl,
     factor_display_label,
     load_personas,
+    openai_key_configured,
     pct,
     persona_body,
     pick_primary_intervention,
+    resolve_openai_api_key,
     risk_band_nl,
     secondary_interventions,
     top_local_factors,
@@ -200,6 +203,13 @@ def _sync_bmi_to_weight() -> None:
     st.session_state.whatif_weight = round(float(st.session_state.whatif_bmi) * (height_m**2), 1)
 
 
+def _secrets_openai_key() -> str:
+    try:
+        return str(st.secrets.get("OPENAI_API_KEY", "") or "").strip()
+    except Exception:
+        return ""
+
+
 payloads = personas()
 by_id = {p["patient"]["persona_id"]: p for p in payloads}
 
@@ -236,6 +246,21 @@ with st.sidebar:
         st.session_state.detail_theme = None
     patient = baseline["patient"]
     st.caption(f"{patient['display_name']}, {patient.get('age', '—')} · start {body['weight_kg']:.0f} kg")
+    stored_key = _secrets_openai_key()
+    with st.expander("OpenAI-sleutel", expanded=not openai_key_configured(stored_key)):
+        st.text_input(
+            "OpenAI API key",
+            type="password",
+            key="openai_api_key",
+            placeholder="sk-…",
+            help="Zelfde patroon als eerdere opdracht: plak hier, of zet OPENAI_API_KEY in .streamlit/secrets.toml. Wordt niet gecommit.",
+        )
+        st.caption("Of: omgeving OPENAI_API_KEY, of kopieer secrets.toml.example naar secrets.toml.")
+
+openai_key = resolve_openai_api_key(
+    st.session_state.get("openai_api_key"),
+    _secrets_openai_key(),
+)
 
 if use_live:
     payload = overlay_live_predictions(
@@ -333,19 +358,35 @@ if secondaries:
                 st.session_state.detail_theme = theme
                 st.rerun()
 
-with st.expander("Vraag het Boris"):
+with st.expander("Vraag het Boris", expanded=bool(st.session_state.get("chat"))):
     if "chat" not in st.session_state or st.session_state.get("chat_persona") != persona_id:
         st.session_state.chat = []
         st.session_state.chat_persona = persona_id
+    if openai_key:
+        st.caption(f"Verbonden met OpenAI · {OPENAI_MODEL}")
+    else:
+        st.caption("Geen API-sleutel. Plak er een in de sidebar — tot die tijd vaste teksten.")
     with st.form("ask_buddy", clear_on_submit=True):
         question = st.text_input("Je vraag", placeholder="Wandelen, eten, slapen…")
         asked = st.form_submit_button("Vraag")
     if asked:
-        reply, source = answer_question(question, payload)
+        history = [(prev_q, prev_a) for prev_q, prev_a, _src in st.session_state.chat]
+        reply, source = answer_question(
+            question, payload, api_key=openai_key, history=history
+        )
         st.session_state.chat.append((question, reply, source))
     for q, reply, source in st.session_state.chat:
-        st.markdown(f"**Jij:** {q}")
-        st.info(reply)
+        st.chat_message("user").write(q)
+        with st.chat_message("assistant"):
+            st.write(reply)
+            if source == "openai":
+                st.caption("OpenAI")
+            elif source.startswith("guardrail"):
+                st.caption("Guardrail — geen medisch advies")
+            elif source == "openai-auth":
+                st.caption("Sleutel geweigerd")
+            else:
+                st.caption("Vaste tekst")
 
 st.caption(
     "Demo met Boris. Geen diagnose, geen triage, geen recept. "

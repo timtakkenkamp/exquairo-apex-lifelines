@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import unittest
+import unittest.mock
 
 from intervention_pages import get_intervention_page
 from buddy_lib import (
     DEFLECT_MESSAGE,
     EXAMPLE_CONTRACT,
+    OPENAI_AUTH_MESSAGE,
     PATIENT_RISK_COPY,
     answer_question,
     apply_weight_whatif,
@@ -15,7 +17,9 @@ from buddy_lib import (
     is_medical_or_triage,
     load_payload,
     load_personas,
+    optional_llm_reply,
     pick_primary_intervention,
+    resolve_openai_api_key,
     top_local_factors,
     validate_payload,
 )
@@ -137,6 +141,77 @@ class GuardrailTests(unittest.TestCase):
         text, source = answer_question("How can I walk more?", river)
         self.assertEqual(source, "template")
         self.assertIn("wandel", text.lower())
+        text, source = answer_question("Hoe kan ik meer wandelen?", river)
+        self.assertEqual(source, "template")
+        self.assertIn("wandel", text.lower())
+        self.assertTrue(is_medical_or_triage("Moet ik metformine nemen?"))
+        text, source = answer_question("Moet ik metformine nemen?", river)
+        self.assertEqual(source, "guardrail")
+        self.assertEqual(text, DEFLECT_MESSAGE)
+
+
+class OpenAIHookTests(unittest.TestCase):
+    def test_resolve_openai_api_key_prefers_argument(self):
+        self.assertEqual(resolve_openai_api_key("  sk-demo  ", "sk-other"), "sk-demo")
+        self.assertEqual(resolve_openai_api_key("", None, "sk-third"), "sk-third")
+
+    def test_mocked_openai_client_returns_model_text(self):
+        river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")
+
+        class _Msg:
+            content = "Laten we na het eten een rondje Noorderplantsoen lopen."
+
+        class _Choice:
+            message = _Msg()
+
+        class _Resp:
+            choices = [_Choice()]
+
+        class _Completions:
+            kwargs = None
+
+            def create(self, **kwargs):
+                _Completions.kwargs = kwargs
+                return _Resp()
+
+        class _Chat:
+            completions = _Completions()
+
+        class _Client:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+                self.chat = _Chat()
+
+        with unittest.mock.patch("openai.OpenAI", _Client):
+            text, source = answer_question(
+                "Hoe kan ik meer wandelen?",
+                river,
+                api_key="sk-test",
+                history=[("Eerder", "Eerder antwoord")],
+            )
+        self.assertEqual(source, "openai")
+        self.assertIn("noorderplantsoen", text.lower())
+        messages = _Completions.kwargs["messages"]
+        self.assertEqual(messages[0]["role"], "system")
+        self.assertIn("Boris", messages[0]["content"])
+        self.assertEqual(messages[-1]["content"], "Hoe kan ik meer wandelen?")
+
+    def test_bad_key_returns_auth_copy(self):
+        river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")
+
+        class _Client:
+            def __init__(self, **kwargs):
+                raise RuntimeError("AuthenticationError 401 invalid_api_key")
+
+        with unittest.mock.patch("openai.OpenAI", _Client):
+            text, source = optional_llm_reply(
+                "Hoe kan ik meer wandelen?",
+                river,
+                "fallback",
+                api_key="sk-bad",
+            )
+        self.assertEqual(source, "openai-auth")
+        self.assertEqual(text, OPENAI_AUTH_MESSAGE)
 
 
 if __name__ == "__main__":

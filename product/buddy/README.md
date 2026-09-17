@@ -38,7 +38,17 @@ Official mascot: drop `product/buddy/assets/boris-mascot.png`. Until then the ap
 - Movement detail: Groningen Plantsoen–gracht–Martini-lus + back
 - Personas River / Sam / Noor
 - Guardrails: no meds, no triage
-- Offline templates if `OPENAI_API_KEY` is missing
+- Chat via OpenAI when a key is present (sidebar, `.streamlit/secrets.toml`, or `OPENAI_API_KEY`); otherwise Dutch templates
+
+## OpenAI chat (zelfde patroon als eerdere opdracht)
+
+De vragenbox **Vraag het Boris** gebruikt `gpt-4o-mini` zodra er een sleutel is. De sleutel wordt niet gecommit.
+
+1. Plak de key in de sidebar onder **OpenAI-sleutel**, of
+2. Kopieer `.streamlit/secrets.toml.example` naar `.streamlit/secrets.toml` en vul `OPENAI_API_KEY` in, of
+3. Zet `OPENAI_API_KEY` in je omgeving.
+
+Zonder sleutel blijft de demo werken met vaste Nederlandse teksten. Medische vragen worden nog steeds geweigerd voordat OpenAI wordt aangeroepen.
 
 ## What-if formula
 

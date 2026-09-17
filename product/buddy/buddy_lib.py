@@ -6,8 +6,6 @@ import copy
 import json
 import os
 import re
-import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -100,7 +98,7 @@ _MEDICAL_RE = re.compile(
     r"\b("
     r"medicin\w*|medication\w*|meds|pill\w*|tablet\w*|drug\w*|dosage|dose|"
     r"prescrib\w*|prescription|pharmacy|"
-    r"metformin|insulin|ozempic|wegovy|semaglutide|statin\w*|glp-?1|"
+    r"metformin\w*|insulin\w*|ozempic|wegovy|semaglutide|statin\w*|glp-?1|"
     r"diagnos\w*|diabetic|do i have|am i sick|"
     r"triage|emergenc\w*|chest pain|ambulance|a&e|er visit|hospital|"
     r"blood test result|lab result|treat my|cure|symptom\w*|"
@@ -364,11 +362,35 @@ def template_reply(question: str, payload: dict[str, Any]) -> str:
     q = (question or "").lower()
     interventions = payload.get("interventions") or []
     theme_hits = {
-        "sport": ("walk", "sport", "move", "activ", "cycl", "bike", "exercise"),
-        "food": ("eat", "food", "meal", "drink", "sugar", "diet", "plate"),
-        "sleep": ("sleep", "bed", "wind-down", "insomnia"),
-        "smoking": ("smok", "cigarette", "vape"),
-        "alcohol": ("alcohol", "drink", "beer", "wine"),
+        "sport": (
+            "walk",
+            "wandel",
+            "sport",
+            "beweeg",
+            "beweg",
+            "fiets",
+            "move",
+            "activ",
+            "cycl",
+            "bike",
+            "exercise",
+        ),
+        "food": (
+            "eat",
+            "eet",
+            "eten",
+            "voeding",
+            "maaltijd",
+            "suiker",
+            "food",
+            "meal",
+            "sugar",
+            "diet",
+            "plate",
+        ),
+        "sleep": ("sleep", "slaap", "bed", "avondritueel", "wind-down", "insomnia"),
+        "smoking": ("smok", "rook", "roken", "sigaret", "cigarette", "vape"),
+        "alcohol": ("alcohol", "bier", "wijn", "beer", "wine"),
     }
     for intervention in interventions:
         theme = intervention.get("theme")
@@ -382,58 +404,111 @@ def template_reply(question: str, payload: dict[str, Any]) -> str:
     if coaching:
         return coaching
     return (
-        "Let's keep this practical: pick one movement habit and one food habit "
-        "you can repeat this week. Your care provider stays the place for medical questions."
+        "Houd het klein: kies deze week één bewegingsgewoonte en één eetgewoonte "
+        "die je kunt herhalen. Voor medicijnen of klachten blijf je bij je zorgverlener."
     )
 
 
-def optional_llm_reply(question: str, payload: dict[str, Any], fallback: str) -> tuple[str, str]:
-    """Return (text, source). Uses OpenAI only when OPENAI_API_KEY is already set."""
-    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
-    if not api_key:
+OPENAI_MODEL = "gpt-4o-mini"
+OPENAI_AUTH_MESSAGE = (
+    "Die OpenAI-sleutel wordt niet geaccepteerd. Plak een geldige key "
+    "(begint meestal met sk-) in de sidebar of in .streamlit/secrets.toml."
+)
+
+
+def resolve_openai_api_key(*candidates: str | None) -> str:
+    """First non-empty candidate, then OPENAI_API_KEY from the environment."""
+    for raw in candidates:
+        if raw and str(raw).strip():
+            return str(raw).strip()
+    return os.environ.get("OPENAI_API_KEY", "").strip()
+
+
+def openai_key_configured(*candidates: str | None) -> bool:
+    return bool(resolve_openai_api_key(*candidates))
+
+
+def _coach_system_prompt(payload: dict[str, Any]) -> str:
+    patient = payload.get("patient") or {}
+    name = patient.get("display_name") or "daar"
+    risks = {r.get("id"): r for r in payload.get("risks") or []}
+    short = risks.get("t1_t2") or {}
+    longr = risks.get("t1_t3") or {}
+    factor_lines = []
+    for factor in top_local_factors(payload, 3):
+        factor_lines.append(
+            f"- {factor_display_label(factor)}: {factor_direction_nl(factor.get('direction'))}"
+        )
+    primary = pick_primary_intervention(payload)
+    step = (
+        f"{primary['title']}: {primary.get('summary') or ''}"
+        if primary
+        else "Een kleine leefstijlstap die je kunt herhalen."
+    )
+    return (
+        "Je bent Boris, een kalme leefstijl-buddy in een demo-app.\n"
+        "Antwoord altijd in het Nederlands, in 2–4 korte zinnen. Warm, niet overdreven.\n"
+        "Nooit diagnosticeren, medicatie adviseren, doseren of triëren.\n"
+        "Bij medicijnen, uitslagen, symptomen of spoed: verwijs naar de arts "
+        "of praktijkondersteuner en geef geen dosering.\n"
+        "Alleen coaching over beweging, eten, slapen, roken en alcohol.\n"
+        "Cijfers hier zijn een demo-proxy, geen diagnose.\n"
+        f"Patiënt in deze demo: {name}.\n"
+        f"Korte-termijn risico: {pct(short.get('risk_score') or 0)} "
+        f"({risk_band_nl(short.get('risk_label') or 'medium')}).\n"
+        f"Lange-termijn risico: {pct(longr.get('risk_score') or 0)} "
+        f"({risk_band_nl(longr.get('risk_label') or 'medium')}).\n"
+        "Waarom deze persoon:\n"
+        + ("\n".join(factor_lines) or "- (geen lokale factoren)")
+        + f"\nEerste stap die de app voorstelt: {step}\n"
+    )
+
+
+def optional_llm_reply(
+    question: str,
+    payload: dict[str, Any],
+    fallback: str,
+    *,
+    api_key: str | None = None,
+    history: list[tuple[str, str]] | None = None,
+) -> tuple[str, str]:
+    """Return (text, source). Uses the official OpenAI client when a key is present."""
+    key = resolve_openai_api_key(api_key)
+    if not key:
         return fallback, "template"
 
-    name = (payload.get("patient") or {}).get("display_name", "there")
-    system = (
-        "You are a calm lifestyle coaching buddy in a demo app. "
-        "Speak in 2–4 short sentences. Motivating, not over-the-top. "
-        "Never diagnose, prescribe, dose, or triage. "
-        "If the user asks about medication, symptoms, diagnosis, or emergencies, "
-        "deflect to their care provider. Lifestyle only: movement, food, sleep, "
-        f"smoking, alcohol. The patient's demo name is {name}."
-    )
-    body = json.dumps(
-        {
-            "model": "gpt-4o-mini",
-            "temperature": 0.4,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": question},
-            ],
-        }
-    ).encode("utf-8")
-    req = urllib.request.Request(
-        "https://api.openai.com/v1/chat/completions",
-        data=body,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
     try:
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        text = data["choices"][0]["message"]["content"].strip()
-        return text or fallback, "openai"
-    except (urllib.error.URLError, TimeoutError, KeyError, IndexError, json.JSONDecodeError):
+        from openai import OpenAI
+    except ImportError:
         return fallback, "template"
 
+    messages: list[dict[str, str]] = [{"role": "system", "content": _coach_system_prompt(payload)}]
+    for prior_q, prior_a in (history or [])[-6:]:
+        if prior_q:
+            messages.append({"role": "user", "content": prior_q})
+        if prior_a:
+            messages.append({"role": "assistant", "content": prior_a})
+    messages.append({"role": "user", "content": question})
+
+    try:
+        client = OpenAI(api_key=key, timeout=12.0)
+        response = client.chat.completions.create(
+            model=os.environ.get("OPENAI_MODEL", OPENAI_MODEL),
+            temperature=0.4,
+            messages=messages,
+        )
+        text = ((response.choices[0].message.content) or "").strip()
+        return text or fallback, "openai"
+    except Exception as exc:
+        blob = f"{type(exc).__name__} {exc}".lower()
+        if any(token in blob for token in ("auth", "401", "invalid_api_key", "incorrect api key")):
+            return OPENAI_AUTH_MESSAGE, "openai-auth"
+        return fallback, "openai-error"
 
 
 _MEDICAL_ADVICE_OUT = re.compile(
     r"\b(take|start|stop|dose|mg\b|prescribe|diagnos|"
-    r"neem\b|dosering|voorschrijf|diagnose|metformin|insulin)\b",
+    r"neem\b|dosering|voorschrijf|diagnose|metformin\w*|insulin\w*)\b",
     re.IGNORECASE,
 )
 
@@ -442,14 +517,22 @@ def _looks_like_medical_advice(text: str) -> bool:
     return bool(_MEDICAL_ADVICE_OUT.search(text or ""))
 
 
-def answer_question(question: str, payload: dict[str, Any]) -> tuple[str, str]:
+def answer_question(
+    question: str,
+    payload: dict[str, Any],
+    *,
+    api_key: str | None = None,
+    history: list[tuple[str, str]] | None = None,
+) -> tuple[str, str]:
     text = (question or "").strip()
     if not text:
         return "Stel een vraag over een dagelijkse gewoonte — wandelen, eten, slapen, roken of alcohol.", "empty"
     if is_medical_or_triage(text):
         return DEFLECT_MESSAGE, "guardrail"
     fallback = template_reply(text, payload)
-    reply, source = optional_llm_reply(text, payload, fallback)
+    reply, source = optional_llm_reply(
+        text, payload, fallback, api_key=api_key, history=history
+    )
     if source == "openai" and _looks_like_medical_advice(reply):
         return DEFLECT_MESSAGE, "guardrail-post"
     return reply, source
