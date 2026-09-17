@@ -1,0 +1,267 @@
+/* Buddy theme tokens — lifestyle cards, not clinical chrome */
+:root {
+  --buddy-bg: #f3efe6;
+  --buddy-ink: #1c2a25;
+  --buddy-muted: #5c6b64;
+  --buddy-card: #fffdf8;
+  --buddy-line: #e4ddd0;
+  --sport: #1b7f6b;
+  --sport-soft: #d7efe8;
+  --sport-2: #2a8fb8;
+  --food: #e07a3d;
+  --food-soft: #fde6d4;
+  --food-2: #e85d4c;
+  --sleep: #5459c4;
+  --sleep-soft: #e4e5f8;
+  --smoking: #6a5678;
+  --smoking-soft: #ece4f0;
+  --alcohol: #c48a2b;
+  --alcohol-soft: #f8ebcc;
+  --risk-low: #2d8a6e;
+  --risk-medium: #c9862a;
+  --risk-high: #d45b4a;
+}
+
+.stApp {
+  background: linear-gradient(180deg, #f7f3ea 0%, #eef3ef 100%);
+}
+
+.block-container {
+  padding-top: 1.2rem;
+  max-width: 1180px;
+}
+
+.buddy-kicker {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--buddy-muted);
+  margin-bottom: 0.2rem;
+}
+
+.buddy-title {
+  font-size: 1.85rem;
+  line-height: 1.2;
+  color: var(--buddy-ink);
+  font-weight: 700;
+  margin: 0 0 0.35rem 0;
+}
+
+.buddy-lead {
+  color: var(--buddy-muted);
+  font-size: 1.02rem;
+  margin: 0 0 1rem 0;
+}
+
+.disclaimer-banner {
+  background: #fff8e8;
+  border: 1px solid #ead8a8;
+  color: #5a4b22;
+  border-radius: 12px;
+  padding: 0.7rem 0.95rem;
+  font-size: 0.88rem;
+  margin: 0.4rem 0 1.1rem 0;
+}
+
+.risk-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+}
+
+.risk-card {
+  background: var(--buddy-card);
+  border: 1px solid var(--buddy-line);
+  border-radius: 18px;
+  padding: 1.05rem 1.15rem 1.15rem;
+  box-shadow: 0 8px 24px rgba(28, 42, 37, 0.04);
+}
+
+.risk-card .horizon {
+  font-weight: 700;
+  font-size: 1.02rem;
+  color: var(--buddy-ink);
+}
+
+.risk-card .when {
+  color: var(--buddy-muted);
+  font-size: 0.86rem;
+  margin-bottom: 0.45rem;
+}
+
+.risk-card .pct {
+  font-size: 3rem;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin: 0.15rem 0 0.45rem;
+}
+
+.risk-card.low .pct { color: var(--risk-low); }
+.risk-card.medium .pct { color: var(--risk-medium); }
+.risk-card.high .pct { color: var(--risk-high); }
+
+.badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.18rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.badge.low { background: #d9f3ea; color: #1d6b54; }
+.badge.medium { background: #f8e6c6; color: #8a5a12; }
+.badge.high { background: #f8d9d4; color: #9a3328; }
+
+.risk-sub {
+  margin-top: 0.55rem;
+  color: var(--buddy-muted);
+  font-size: 0.9rem;
+}
+
+.meter {
+  margin-top: 0.75rem;
+  height: 8px;
+  background: #eee7da;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.meter.low > span { background: var(--risk-low); }
+.meter.medium > span { background: var(--risk-medium); }
+.meter.high > span { background: var(--risk-high); }
+
+.factor-row {
+  background: var(--buddy-card);
+  border: 1px solid var(--buddy-line);
+  border-radius: 14px;
+  padding: 0.7rem 0.85rem 0.8rem;
+  margin-bottom: 0.55rem;
+}
+
+.factor-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: baseline;
+}
+
+.factor-name { font-weight: 650; color: var(--buddy-ink); }
+.factor-val { color: var(--buddy-muted); font-size: 0.88rem; }
+.factor-dir {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.factor-dir.up { color: var(--risk-high); }
+.factor-dir.down { color: var(--risk-low); }
+
+.factor-bar {
+  margin-top: 0.45rem;
+  height: 10px;
+  background: #efe8db;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.factor-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.factor-bar.up > span { background: linear-gradient(90deg, #e7a08c, #d45b4a); }
+.factor-bar.down > span { background: linear-gradient(90deg, #7cc4b0, #1b7f6b); }
+
+.ix-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem;
+}
+
+.ix-card {
+  background: var(--buddy-card);
+  border-radius: 16px;
+  padding: 0.95rem 1rem 1rem;
+  border: 1px solid var(--buddy-line);
+  border-top-width: 7px;
+  min-height: 190px;
+}
+
+.ix-card.sport { border-top-color: var(--sport); background: linear-gradient(180deg, var(--sport-soft), var(--buddy-card) 42%); }
+.ix-card.food { border-top-color: var(--food); background: linear-gradient(180deg, var(--food-soft), var(--buddy-card) 42%); }
+.ix-card.sleep { border-top-color: var(--sleep); background: linear-gradient(180deg, var(--sleep-soft), var(--buddy-card) 42%); }
+.ix-card.smoking { border-top-color: var(--smoking); background: linear-gradient(180deg, var(--smoking-soft), var(--buddy-card) 42%); }
+.ix-card.alcohol { border-top-color: var(--alcohol); background: linear-gradient(180deg, var(--alcohol-soft), var(--buddy-card) 42%); }
+
+.ix-theme {
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+
+.ix-card.sport .ix-theme { color: var(--sport); }
+.ix-card.food .ix-theme { color: var(--food-2); }
+.ix-card.sleep .ix-theme { color: var(--sleep); }
+.ix-card.smoking .ix-theme { color: var(--smoking); }
+.ix-card.alcohol .ix-theme { color: var(--alcohol); }
+
+.ix-card h3 {
+  margin: 0 0 0.4rem 0;
+  font-size: 1.08rem;
+  color: var(--buddy-ink);
+}
+
+.ix-card p {
+  margin: 0 0 0.65rem 0;
+  color: #3d4a44;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.ix-link {
+  font-size: 0.78rem;
+  color: var(--buddy-muted);
+}
+
+.coach-card {
+  background: var(--buddy-card);
+  border: 1px solid var(--buddy-line);
+  border-radius: 16px;
+  padding: 1rem 1.1rem;
+  border-left: 7px solid var(--sport-2);
+}
+
+.reply {
+  background: #eef6f3;
+  border-radius: 12px;
+  padding: 0.8rem 0.95rem;
+  color: #1c2a25;
+  margin-top: 0.4rem;
+}
+
+.reply.guardrail {
+  background: #fff4ee;
+  border: 1px solid #f0d2c4;
+}
+
+.footer-note {
+  color: var(--buddy-muted);
+  font-size: 0.82rem;
+  margin-top: 1.2rem;
+}
+
+@media (max-width: 900px) {
+  .risk-grid, .ix-grid { grid-template-columns: 1fr; }
+}

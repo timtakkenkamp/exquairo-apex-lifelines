@@ -1,0 +1,116 @@
+{
+  "schema_version": "0.2.0",
+  "source": "mock",
+  "generated_at": "2026-09-17T00:00:00Z",
+  "disclaimer": "Demo only. Not a diagnosis, prognosis, or medical advice. Lifestyle coaching — talk to your care provider about medical questions.",
+  "patient": {
+    "persona_id": "persona-sam",
+    "display_name": "Sam",
+    "age": 42,
+    "pronouns": "he/him",
+    "tagline": "Already moving — a few habits to tidy.",
+    "story": "Early 40s, BMI in the mid-20s, cycles to work some days, smokes occasionally, drinks more than a ‘none’ pattern.",
+    "snapshot": {
+      "hba1c_t1": "5.8%",
+      "bmi": "26.1",
+      "cycle_commute": "some days",
+      "smoking": "occasional",
+      "alcohol": "above none"
+    }
+  },
+  "target": {
+    "id": "hba1c_gt_6_5",
+    "label": "HbA1c above 6.5%",
+    "threshold": ">6.5%",
+    "unit": "%"
+  },
+  "risks": [
+    {
+      "id": "t1_t2",
+      "horizon": "T1→T2",
+      "label": "First visit to second visit",
+      "risk_score": 0.27,
+      "risk_label": "medium"
+    },
+    {
+      "id": "t1_t3",
+      "horizon": "T1→T3",
+      "label": "First visit to third visit",
+      "risk_score": 0.38,
+      "risk_label": "medium"
+    }
+  ],
+  "top_factors": [
+    {
+      "id": "smoking",
+      "label": "Smoking",
+      "direction": "increases_risk",
+      "importance": 0.29,
+      "patient_value": "occasional",
+      "unit": null,
+      "note": "Sam's strongest local mock driver."
+    },
+    {
+      "id": "alcohol",
+      "label": "Alcohol pattern",
+      "direction": "increases_risk",
+      "importance": 0.21,
+      "patient_value": "above none",
+      "unit": null,
+      "note": "Local mock contribution — not a trained attribution."
+    },
+    {
+      "id": "cycle_commute",
+      "label": "Cycling to work",
+      "direction": "decreases_risk",
+      "importance": 0.18,
+      "patient_value": "some days",
+      "unit": null,
+      "note": "Protective local factor unique to Sam."
+    },
+    {
+      "id": "bmi",
+      "label": "Body mass index",
+      "direction": "increases_risk",
+      "importance": 0.12,
+      "patient_value": "26.1",
+      "unit": "kg/m²",
+      "note": "Milder contribution than River — local, not global."
+    },
+    {
+      "id": "sports",
+      "label": "Weekly sports / activity",
+      "direction": "decreases_risk",
+      "importance": 0.09,
+      "patient_value": "commute movement",
+      "unit": null,
+      "note": "Activity already working in Sam's favour."
+    }
+  ],
+  "interventions": [
+    {
+      "id": "smoke-free-days",
+      "theme": "smoking",
+      "title": "Grow smoke-free days",
+      "summary": "Keep the bike commute and add two fully smoke-free days this week. No products suggested here — your care team can help if you want extra support.",
+      "linked_factors": ["smoking"]
+    },
+    {
+      "id": "alcohol-free-evenings",
+      "theme": "alcohol",
+      "title": "Two alcohol-free evenings",
+      "summary": "Pick two weeknights that stay drink-free. Swap the usual glass for a sparkling water ritual you actually like.",
+      "linked_factors": ["alcohol"]
+    },
+    {
+      "id": "keep-cycling",
+      "theme": "sport",
+      "title": "Protect the commute habit",
+      "summary": "Your cycling already shows up as a plus. Lock in three bike days and treat missed rain days as a walk, not a write-off.",
+      "linked_factors": ["cycle_commute", "sports"]
+    }
+  ],
+  "coaching": {
+    "template": "Sam, you already have a movement habit working for you. The T1→T2 and T1→T3 pictures sit in a mid range, with smoking and alcohol as the local extras. Nudge those two, keep the bike — that is a strong, doable combo."
+  }
+}

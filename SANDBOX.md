@@ -23,11 +23,13 @@ Hard rules:
 
 Near-term focus is presentation + product: an **electronic buddy** for patients.
 
-Intended patient experience (mock first):
+Intended patient experience (mock first, now runnable):
 
-1. Personal diabetes / unfavorable-HbA1c risk (percentage + label).
-2. Top **patient-specific** risk factors (local importance, not only global).
-3. Linked lifestyle intervention cards (x / y / z).
+1. Two pictures: chance HbA1c will be **> 6.5%** on **T1→T2** and **T1→T3**.
+2. Top **patient-specific** risk factors (local importance, not a global list).
+3. Linked lifestyle intervention cards with theme colours.
+
+Run the demo: `uv run streamlit run product/buddy/app.py`
 
 Later, an ML/DL model can feed the same buddy UI through a **stable JSON contract**. The UI should not need a redesign when the mock is swapped for a model API.
 
@@ -46,7 +48,7 @@ Inspected on bootstrap. Do not treat this as a license to rewrite shared modelin
 | Notebooks | `Scripts and Notebooks/discovery.ipynb` — NSES parse/impute discovery (Martijn) |
 | Diabetes-relevant columns (raw) | `HBAC_*`, `HB1C_*`, `GLU_*`, `BMI_*`, `SMOKING`, `SPORTS_T1`, family T2DM flags, diet/activity fields |
 
-HbA1c-style fields in the synth table include `HBAC_T1` / `HBAC_T2` / `HBAC_T3` (percent-like values such as 5.5) and `HB1C_*` (mmol/mol-like). The working product proposal uses an unfavorable-HbA1c proxy (e.g. ≥6.5%) **as a mock target**, not a validated clinical claim.
+HbA1c-style fields in the synth table include `HBAC_T1` / `HBAC_T2` / `HBAC_T3` (percent-like values such as 5.5) and `HB1C_*` (mmol/mol-like). The locked mock target is **HbA1c > 6.5%** on T1→T2 and T1→T3 — not a validated clinical claim.
 
 ## What this sandbox will not do by default
 
@@ -58,7 +60,6 @@ HbA1c-style fields in the synth table include `HBAC_T1` / `HBAC_T2` / `HBAC_T3` 
 
 Typical follow-ups Tim can request on this fork:
 
-- Mock Streamlit (or similar) buddy UI driven by `product/buddy/contract.example.json`.
-- Tighten or version the JSON contract.
-- Wire personas into a clickable demo.
-- Later: a model API that emits the same contract.
+- Polish the Streamlit buddy (`product/buddy/app.py`) for a live audience.
+- Tighten schema `0.2.0` once the colleagues’ model feature list is frozen.
+- Later: a model API that emits the same contract (still fork-only).

@@ -1,57 +1,72 @@
-# Electronic buddy (product scaffold)
+# Electronic buddy (mock demo)
 
-Working proposal for this fork: a patient-facing **electronic buddy** that presents personal diabetes / unfavorable-HbA1c risk, the top patient-specific drivers, and a few linked lifestyle interventions.
+Patient-facing **electronic buddy** for this Tim-owned fork. Near-term it is a product demo: two HbA1c-risk pictures, local factors, and lifestyle cards. A colleagues’ model can later fill the same JSON. Nothing here is a clinical claim.
 
-This folder is **product-first**. The first usable artifact is a mock UI plus a stable JSON contract. A model comes later and must fit the contract, not the other way around.
+## Locked demo decisions
 
-Nothing here is a clinical claim. Demo numbers and copy are placeholders.
+| Decision | Value |
+| --- | --- |
+| Outcome | Chance HbA1c will be **> 6.5%** (not ≥, not another cutoff, not metabolic disorder) |
+| Horizons | **T1→T2** and **T1→T3** (percent + low / medium / high) |
+| Factors | Local (per persona), 3–5 items — mock stand-ins for later model features |
+| Cards | Lifestyle only, with theme colours |
+| Tone | Coaching, motivating, not over-the-top |
+| Guardrails | No medication, no triage, no hard medical advice |
 
-## Intended experience
+## How to run (15:00 demo)
 
-The buddy shows three things on one screen:
+From the repo root, after cloning this fork:
 
-1. **Risk** — chance of unfavorable HbA1c (working proxy: e.g. ≥6.5%) as a percentage plus a short label (`low` / `moderate` / `high`).
-2. **Why you** — top local (patient-specific) factors, not only a global feature-importance list.
-3. **What you can try** — intervention cards tied to those factors (activity, diet pattern, smoking, sleep, etc.).
+```bash
+uv sync
+uv run streamlit run product/buddy/app.py
+```
 
-Later, an ML/DL model can populate the same three panels. The UI should keep working if `source` flips from `mock` to `model`.
+Without `uv`:
 
-## Phased plan
+```bash
+pip install -r product/buddy/requirements.txt
+streamlit run product/buddy/app.py
+```
 
-### Phase 1 — Mock UI
+Then open the URL Streamlit prints (usually http://localhost:8501). Use the sidebar to switch **River / Sam / Noor**.
 
-- Read `contract.example.json` (and later persona-specific fixtures).
-- Render risk %, label, factor list, and intervention cards.
-- Suggested first implementation: Streamlit app under this folder (not started yet).
-- Personas in `personas.md` drive the demo, not real patients.
+Optional: if `OPENAI_API_KEY` is already in the environment, “Ask your buddy” may add a short LLM blurb. The app works offline with templated copy if the key is missing.
 
-### Phase 2 — JSON contract
+## What is mocked vs later model
 
-- Keep a versioned payload (`schema_version`) with at least:
-  - `risk_score` (0–1 probability)
-  - `risk_label`
-  - `top_factors[]` (id, label, direction, local importance, optional patient value)
-  - `interventions[]` (id, title, summary, linked factor ids)
-- UI consumes only this shape.
-- Mock writer and future model API share the same example as the source of truth.
+| On screen | Today | Later |
+| --- | --- | --- |
+| T1→T2 / T1→T3 percents | Hardcoded in persona JSON | Model probabilities for HbA1c > 6.5% |
+| Top factors | Hardcoded local importances | Patient-specific attributions from the team model |
+| Intervention cards | Curated lifestyle library | Same cards, mapped from factor ids |
+| Coaching note | Template (optional OpenAI) | Same contract field |
+| Ask-your-buddy | Guardrails + templates | Same rules; still no prescribing |
 
-### Phase 3 — Model API
-
-- Predict the unfavorable-HbA1c (or agreed diabetes-proxy) target on Tim’s sandbox data only.
-- Return local explanations (e.g. per-patient attributions) mapped into `top_factors`.
-- Map factor ids to intervention cards; do not invent new clinical claims in the UI.
-- Swap the mock loader for an HTTP/local function that returns the same JSON.
-
-## Out of scope for this scaffold
-
-- Training or evaluating models.
-- Changing team preprocessing or the filtered workbook used by colleagues.
-- Pushing any of this to the upstream (`kyliekeijzer`) repo.
+The UI reads `product/buddy/fixtures/persona-*.json`. `contract.example.json` is the canonical River payload (schema `0.2.0`).
 
 ## Files
 
 | File | Role |
 | --- | --- |
-| `contract.example.json` | Example buddy payload |
-| `personas.md` | Demo patients for mock UI |
-| `README.md` | This vision + plan |
+| `app.py` | Streamlit UI |
+| `buddy_lib.py` | Loader, validation, coaching, guardrails |
+| `styles.css` | Theme tokens (sport / food / sleep / smoking / alcohol) |
+| `fixtures/` | River, Sam, Noor mocks |
+| `contract.example.json` | Example payload (River) |
+| `personas.md` | Persona stories |
+| `test_buddy.py` | Fixture + guardrail checks |
+
+```bash
+uv run python product/buddy/test_buddy.py
+```
+
+## Guardrails
+
+The buddy will **not** prescribe, diagnose, or triage. Medical / medication / emergency questions are deflected to a care provider. Lifestyle coaching (move, eat, sleep, smoke-free days, alcohol-free evenings) is in scope.
+
+## Out of scope
+
+- Training or evaluating models
+- Changing team preprocessing
+- Pushing to `kyliekeijzer/exquairo-apex-lifelines`

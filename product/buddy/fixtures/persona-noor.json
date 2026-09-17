@@ -1,0 +1,116 @@
+{
+  "schema_version": "0.2.0",
+  "source": "mock",
+  "generated_at": "2026-09-17T00:00:00Z",
+  "disclaimer": "Demo only. Not a diagnosis, prognosis, or medical advice. Lifestyle coaching — talk to your care provider about medical questions.",
+  "patient": {
+    "persona_id": "persona-noor",
+    "display_name": "Noor",
+    "age": 38,
+    "pronouns": "she/her",
+    "tagline": "A maintenance chapter — keep what works.",
+    "story": "Late 30s, active, BMI in a lower range, no family T2DM flags, HbA1c well below the mock threshold.",
+    "snapshot": {
+      "hba1c_t1": "5.3%",
+      "bmi": "23.4",
+      "sports": "regular",
+      "smoking": "no",
+      "sleep": "ok"
+    }
+  },
+  "target": {
+    "id": "hba1c_gt_6_5",
+    "label": "HbA1c above 6.5%",
+    "threshold": ">6.5%",
+    "unit": "%"
+  },
+  "risks": [
+    {
+      "id": "t1_t2",
+      "horizon": "T1→T2",
+      "label": "First visit to second visit",
+      "risk_score": 0.08,
+      "risk_label": "low"
+    },
+    {
+      "id": "t1_t3",
+      "horizon": "T1→T3",
+      "label": "First visit to third visit",
+      "risk_score": 0.13,
+      "risk_label": "low"
+    }
+  ],
+  "top_factors": [
+    {
+      "id": "sports",
+      "label": "Weekly sports / activity",
+      "direction": "decreases_risk",
+      "importance": 0.28,
+      "patient_value": "regular",
+      "unit": null,
+      "note": "Noor's strongest protective local factor."
+    },
+    {
+      "id": "bmi",
+      "label": "Body mass index",
+      "direction": "decreases_risk",
+      "importance": 0.22,
+      "patient_value": "23.4",
+      "unit": "kg/m²",
+      "note": "Protective in this mock — opposite of River's local picture."
+    },
+    {
+      "id": "sleep",
+      "label": "Sleep quality",
+      "direction": "decreases_risk",
+      "importance": 0.14,
+      "patient_value": "ok",
+      "unit": null,
+      "note": "Maintenance factor, not a problem to fix."
+    },
+    {
+      "id": "smoking",
+      "label": "Smoking",
+      "direction": "decreases_risk",
+      "importance": 0.11,
+      "patient_value": "no",
+      "unit": null,
+      "note": "Absence of smoking as a protective local signal."
+    },
+    {
+      "id": "kcal",
+      "label": "Energy intake pattern",
+      "direction": "increases_risk",
+      "importance": 0.07,
+      "patient_value": "slightly high some days",
+      "unit": null,
+      "note": "Smallest local nudge — keep an eye on busy-day snacking."
+    }
+  ],
+  "interventions": [
+    {
+      "id": "keep-training",
+      "theme": "sport",
+      "title": "Keep the sessions you already like",
+      "summary": "Do not add volume for its own sake. Protect two sessions you enjoy and treat them as non-negotiable calendar blocks.",
+      "linked_factors": ["sports"]
+    },
+    {
+      "id": "food-maintain",
+      "theme": "food",
+      "title": "Steady meals on busy days",
+      "summary": "Your overall pattern looks balanced. Pack one simple lunch for the two longest workdays so grazing does not creep up.",
+      "linked_factors": ["kcal", "bmi"]
+    },
+    {
+      "id": "sleep-keep",
+      "theme": "sleep",
+      "title": "Guard the sleep that already works",
+      "summary": "Keep the wind-down you have. If a late week shows up, recover with the same bedtime the next night rather than a weekend lie-in marathon.",
+      "linked_factors": ["sleep"]
+    }
+  ],
+  "coaching": {
+    "template": "Noor, both horizons stay low in this demo — that is a picture to maintain, not overhaul. Your activity and weight are working for you. Keep the routines you already like, and tidy busy-day meals so they do not quietly drift."
+  }
+}
