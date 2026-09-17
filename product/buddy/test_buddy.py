@@ -134,6 +134,7 @@ class SimplifyTests(unittest.TestCase):
         self.assertIn("CHAT_PLACEHOLDER", app)
         self.assertIn("audience_mode", app)
         self.assertIn('query_params.get("demo"', app)
+        self.assertTrue((EXAMPLE_CONTRACT.parent / "assets" / "boris-mascot.png").is_file())
 
 
 class CopyTests(unittest.TestCase):

@@ -31,7 +31,7 @@ Open the URL Streamlit prints (usually http://localhost:8501). Sidebar: **Pietje
 | Three equal cards | **Three tiles** again, ordered by this person’s strongest factors |
 | Cream/coral chrome | Boris sky-blue + sprout green |
 
-Official mascot: drop `product/buddy/assets/boris-mascot.png`. Until then the app uses a placeholder robot + sprout. See `assets/README.md`.
+Official mascot: `product/buddy/assets/boris-mascot.png` (top-left header). See `assets/README.md`.
 
 ## Kept
 

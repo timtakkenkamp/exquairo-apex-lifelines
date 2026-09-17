@@ -1,8 +1,6 @@
 # Boris brand assets
 
-Drop the official mascot here as **`boris-mascot.png`** (or `.svg`).
-
-The Streamlit app looks for `product/buddy/assets/boris-mascot.png` first. If it is missing, it uses the placeholder sprout-robot mark and the brand line *Small steps. Big impact. With Boris.*
+Mascot: **`boris-mascot.png`**. The Streamlit header uses this file top-left. If it is missing, the app falls back to a placeholder sprout-robot mark.
 
 The attached brand board could not be decoded in this environment (truncated PNG). Palette used as an approximation:
 
