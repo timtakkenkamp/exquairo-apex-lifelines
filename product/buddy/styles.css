@@ -42,124 +42,124 @@ section.main,
 .block-container {
   position: relative;
   z-index: 1;
-  padding-top: 1.2rem;
+  padding-top: 0.85rem;
   padding-bottom: 2.4rem;
   max-width: 1120px;
 }
 
+/* Header B — thin horizon band in the sky, not a glass capsule */
+[data-testid="stMarkdown"]:has(.buddy-hero),
+[data-testid="stElementContainer"]:has(.buddy-hero),
+[data-testid="stMarkdownContainer"]:has(.buddy-hero) {
+  width: 100%;
+  background: transparent !important;
+}
+
 .buddy-hero {
   position: relative;
-  overflow: hidden;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  width: fit-content;
-  max-width: 100%;
-  gap: 1.1rem;
-  margin: 0.1rem 0 1.05rem;
-  padding: 0.88rem 1.45rem 0.92rem 0.95rem;
-  border-radius: 999px;
-  background:
-    linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.78) 0%,
-      rgba(234, 244, 251, 0.46) 58%,
-      rgba(237, 248, 240, 0.38) 100%
-    );
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  box-shadow:
-    0 16px 36px rgba(26, 74, 110, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(18px) saturate(1.18);
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  gap: 0.85rem;
+  margin: 0 0 0.95rem;
+  padding: 0.28rem 0 0.72rem;
+  border: none;
+  border-radius: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(232, 244, 250, 0.10) 34%,
+    rgba(255, 255, 255, 0) 72%
+  );
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .buddy-hero::after {
   content: "";
   position: absolute;
-  left: 1.15rem;
-  right: 1.15rem;
+  left: 0;
+  right: 0;
   bottom: 0;
-  height: 2px;
-  border-radius: 999px;
+  height: 1px;
   background: linear-gradient(
     90deg,
-    rgba(61, 139, 191, 0.38),
-    rgba(111, 191, 75, 0.26),
-    transparent 88%
+    rgba(61, 139, 191, 0.28),
+    rgba(111, 191, 75, 0.16),
+    transparent 74%
   );
 }
 
 .buddy-hero-mark {
   flex: 0 0 auto;
-  width: 92px;
-  height: 92px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background:
-    radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.98), rgba(216, 234, 246, 0.62));
-  box-shadow:
-    0 12px 24px rgba(61, 139, 191, 0.14),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
 }
 
 .buddy-hero-face {
-  width: 70px;
+  width: 78px;
   height: auto;
   display: block;
 }
 
 .buddy-hero-fallback {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
+  width: 78px;
+  height: 78px;
+  border-radius: 22px;
   background:
     radial-gradient(circle at 50% 36%, #eaf4fb 0 36%, #3d8bbf 38% 100%);
 }
 
+.buddy-hero--zaal {
+  margin-bottom: 0.7rem;
+  padding-top: 0.12rem;
+}
+
 .buddy-hero-copy {
   min-width: 0;
+  flex: 0 1 auto;
 }
 
 .buddy-hero-kicker {
-  font-size: 0.7rem;
-  letter-spacing: 0.16em;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #3d8bbf;
   font-weight: 700;
-  margin-bottom: 0.18rem;
+  margin-bottom: 0.12rem;
 }
 
 .buddy-hero-line {
-  font-size: 1.62rem;
-  font-weight: 750;
+  font-size: 1.42rem;
+  font-weight: 700;
   color: #1a4a6e;
-  letter-spacing: -0.03em;
-  line-height: 1.18;
+  letter-spacing: -0.028em;
+  line-height: 1.2;
 }
 
 @media (max-width: 640px) {
   .buddy-hero {
-    gap: 0.85rem;
-    padding: 0.85rem 1rem 0.9rem 0.85rem;
-    border-radius: 26px;
-  }
-
-  .buddy-hero-mark {
-    width: 76px;
-    height: 76px;
+    gap: 0.65rem;
+    padding: 0.16rem 0 0.58rem;
   }
 
   .buddy-hero-face,
   .buddy-hero-fallback {
-    width: 58px;
+    width: 60px;
   }
 
   .buddy-hero-fallback {
-    height: 58px;
+    height: 60px;
+    border-radius: 16px;
   }
 
   .buddy-hero-line {
-    font-size: 1.28rem;
+    font-size: 1.16rem;
   }
 }
 
@@ -184,11 +184,16 @@ div[data-testid="stChatInput"] {
 }
 
 header[data-testid="stHeader"] {
-  background: transparent;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
 }
 
-/* Zaalweergave (?demo=1): hide Streamlit chrome + lab sidebar */
+/* Zaalweergave (?demo=1): hide Streamlit chrome + lab sidebar; sky is the top */
+.stApp:has(.buddy-audience-flag) header[data-testid="stHeader"],
+.stApp:has(.buddy-audience-flag) [data-testid="stHeader"],
 .stApp:has(.buddy-audience-flag) header [data-testid="stToolbar"],
+.stApp:has(.buddy-audience-flag) [data-testid="stToolbar"],
 .stApp:has(.buddy-audience-flag) [data-testid="stDecoration"],
 .stApp:has(.buddy-audience-flag) footer,
 .stApp:has(.buddy-audience-flag) #MainMenu,
@@ -196,6 +201,16 @@ header[data-testid="stHeader"] {
 .stApp:has(.buddy-audience-flag) [data-testid="stSidebarCollapsedControl"],
 .stApp:has(.buddy-audience-flag) [data-testid="collapsedControl"] {
   display: none !important;
+}
+
+.stApp:has(.buddy-audience-flag) header[data-testid="stHeader"] {
+  height: 0 !important;
+  min-height: 0 !important;
+}
+
+.stApp:has(.buddy-audience-flag) .block-container,
+.stApp:has(.buddy-audience-flag) [data-testid="stMainBlockContainer"] {
+  padding-top: 0.4rem !important;
 }
 
 .stApp:has(.buddy-audience-flag) h1 {

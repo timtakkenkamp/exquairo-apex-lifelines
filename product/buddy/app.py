@@ -125,9 +125,10 @@ def render_header(*, audience: bool = False) -> None:
         if audience
         else '<div class="buddy-hero-kicker">Met Boris</div>'
     )
+    band = "buddy-hero buddy-hero--zaal" if audience else "buddy-hero"
     st.markdown(
         f"""
-<div class="buddy-hero">
+<div class="{band}">
   <div class="buddy-hero-mark">{face}</div>
   <div class="buddy-hero-copy">
     {kicker}
