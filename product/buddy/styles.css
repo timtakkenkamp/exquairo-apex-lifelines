@@ -294,17 +294,22 @@ header[data-testid="stHeader"] {
 [data-testid="column"]:has(.buddy-tile) [data-testid="stMarkdownContainer"],
 [data-testid="column"]:has(.buddy-tile) .stMarkdown,
 [data-testid="stColumn"]:has(.buddy-tile) [data-testid="stMarkdownContainer"],
-[data-testid="stColumn"]:has(.buddy-tile) .stMarkdown {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  height: 100%;
+[data-testid="stColumn"]:has(.buddy-tile) .stMarkdown,
+[data-testid="column"]:has(.buddy-tile) [data-testid="stMarkdown"] > div,
+[data-testid="stColumn"]:has(.buddy-tile) [data-testid="stMarkdown"] > div {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  align-items: stretch !important;
+  height: 100% !important;
 }
 
 [data-testid="column"]:has(.buddy-tile) .buddy-tile,
 [data-testid="stColumn"]:has(.buddy-tile) .buddy-tile {
   border-radius: 20px 20px 0 0;
   margin-bottom: 0;
+  height: 100% !important;
+  min-height: 100%;
 }
 
 [data-testid="column"]:has(.buddy-tile) [data-testid="stVerticalBlock"] > div:has(.stButton),
@@ -381,9 +386,9 @@ header[data-testid="stHeader"] {
 
 .stApp:has(.buddy-whatif-flag) [data-testid="stHorizontalBlock"]:has([data-testid="stSlider"]) [data-testid="column"]:last-child .stButton > button,
 .stApp:has(.buddy-whatif-flag) [data-testid="stHorizontalBlock"]:has([data-testid="stSlider"]) [data-testid="stColumn"]:last-child .stButton > button {
-  min-height: 2.5rem;
-  height: 2.5rem;
-  max-height: 2.5rem;
+  min-height: 36px;
+  height: 36px;
+  max-height: 36px;
   padding-top: 0;
   padding-bottom: 0;
   border-radius: 999px !important;
