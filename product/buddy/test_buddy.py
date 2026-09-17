@@ -136,10 +136,19 @@ class SimplifyTests(unittest.TestCase):
         self.assertIn('query_params.get("demo"', app)
         self.assertTrue((EXAMPLE_CONTRACT.parent / "assets" / "boris-mascot.png").is_file())
         self.assertIn('class="buddy-tile"', app)
+        self.assertIn("buddy-tile-blurb", app)
+        self.assertIn("buddy-tiles-flag", app)
+        self.assertIn('vertical_alignment="bottom"', app)
         self.assertIn("Past bij jou", app)
         self.assertIn("audience_persona_pills", app)
         self.assertIn("buddy-whatif-flag", app)
         self.assertIn("format_factor_value", app)
+        css = (EXAMPLE_CONTRACT.parent / "styles.css").read_text(encoding="utf-8")
+        self.assertIn("align-items: stretch", css)
+        self.assertIn("buddy-tile-blurb", css)
+        self.assertIn(".buddy-hero", css)
+        self.assertIn("Kleine stappen. Grote impact.", app)
+        self.assertIn("buddy-audience-flag", app)
 
 
 class CopyTests(unittest.TestCase):

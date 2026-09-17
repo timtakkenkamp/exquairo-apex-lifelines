@@ -1,12 +1,12 @@
 /* Boris: soft sky + sprout atmosphere, rounded cards */
 .stApp {
   background:
-    radial-gradient(980px 540px at 4% -14%, rgba(61, 139, 191, 0.30), transparent 64%),
-    radial-gradient(820px 460px at 98% -10%, rgba(126, 217, 87, 0.20), transparent 60%),
-    radial-gradient(680px 300px at 36% -4%, rgba(255, 255, 255, 0.78), transparent 70%),
-    radial-gradient(440px 240px at 86% 16%, rgba(111, 191, 75, 0.10), transparent 72%),
-    radial-gradient(380px 220px at 12% 28%, rgba(61, 139, 191, 0.08), transparent 74%),
-    linear-gradient(180deg, #c8e2f4 0%, #e3f1fb 20%, #eef8f5 56%, #f7fcf9 82%, #ffffff 100%) !important;
+    radial-gradient(1100px 620px at -4% -18%, rgba(61, 139, 191, 0.40), transparent 62%),
+    radial-gradient(960px 540px at 104% -14%, rgba(126, 217, 87, 0.28), transparent 58%),
+    radial-gradient(720px 340px at 38% -2%, rgba(255, 255, 255, 0.55), transparent 68%),
+    radial-gradient(520px 300px at 90% 20%, rgba(111, 191, 75, 0.14), transparent 70%),
+    radial-gradient(480px 280px at 6% 34%, rgba(61, 139, 191, 0.12), transparent 72%),
+    linear-gradient(180deg, #b7dbf0 0%, #d4ebf8 16%, #e7f5f1 46%, #f2faf6 76%, #f8fcfb 100%) !important;
 }
 
 [data-testid="stAppViewContainer"],
@@ -23,7 +23,7 @@ section.main,
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.16;
+  opacity: 0.20;
   mix-blend-mode: soft-light;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.05' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E");
 }
@@ -35,8 +35,8 @@ section.main,
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(520px 190px at 26% 0%, rgba(255, 255, 255, 0.50), transparent 72%),
-    radial-gradient(340px 150px at 90% 4%, rgba(126, 217, 87, 0.10), transparent 70%);
+    radial-gradient(560px 210px at 22% 0%, rgba(255, 255, 255, 0.28), transparent 74%),
+    radial-gradient(380px 170px at 92% 6%, rgba(126, 217, 87, 0.14), transparent 70%);
 }
 
 .block-container {
@@ -50,24 +50,26 @@ section.main,
 .buddy-hero {
   position: relative;
   overflow: hidden;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 1.15rem;
-  margin: 0.1rem 0 0.95rem;
-  padding: 0.95rem 1.4rem 1rem 1.05rem;
-  border-radius: 32px;
+  width: fit-content;
+  max-width: 100%;
+  gap: 1.1rem;
+  margin: 0.1rem 0 1.05rem;
+  padding: 0.88rem 1.45rem 0.92rem 0.95rem;
+  border-radius: 999px;
   background:
     linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.92) 0%,
-      rgba(234, 244, 251, 0.58) 58%,
-      rgba(244, 250, 246, 0.42) 100%
+      rgba(255, 255, 255, 0.78) 0%,
+      rgba(234, 244, 251, 0.46) 58%,
+      rgba(237, 248, 240, 0.38) 100%
     );
-  border: 1px solid rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.72);
   box-shadow:
-    0 20px 44px rgba(26, 74, 110, 0.07),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(16px) saturate(1.12);
+    0 16px 36px rgba(26, 74, 110, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(18px) saturate(1.18);
 }
 
 .buddy-hero::after {
@@ -203,8 +205,9 @@ header[data-testid="stHeader"] {
   margin-bottom: 0.35rem !important;
 }
 
-/* Persona pills (zaal, under Hoi) */
-.stApp:has(.buddy-pills-flag) [data-testid="stPills"] button {
+/* Persona pills (zaal, under Hoi) — Streamlit 1.50 uses stButtonGroup */
+.stApp:has(.buddy-pills-flag) [data-testid="stPills"] button,
+.stApp:has(.buddy-pills-flag) [data-testid="stButtonGroup"] button[data-variant="pills"] {
   border-radius: 999px !important;
   border: 1px solid #c5dceb !important;
   background: #fff !important;
@@ -212,24 +215,111 @@ header[data-testid="stHeader"] {
   font-weight: 650 !important;
   padding: 0.35rem 0.95rem !important;
 }
-.stApp:has(.buddy-pills-flag) [data-testid="stPills"] button[aria-checked="true"] {
+.stApp:has(.buddy-pills-flag) [data-testid="stPills"] button[aria-checked="true"],
+.stApp:has(.buddy-pills-flag) [data-testid="stButtonGroup"] button[data-variant="pills"][aria-checked="true"] {
   background: #3D8BBF !important;
   border-color: #3D8BBF !important;
   color: #fff !important;
 }
 
-/* Tile + CTA as one visual unit */
-[data-testid="column"]:has(.buddy-tile) .buddy-tile {
-  border-radius: 20px 20px 0 0;
-  margin-bottom: 0;
+/* Equal-height Doe-dit tiles: stretch columns, pin CTA to the card bottom */
+.buddy-tile {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  height: 100%;
   min-height: 168px;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #d5e6f2;
+  border-top: 8px solid var(--buddy-tile-bar, #3d8bbf);
+  border-radius: 20px;
+  padding: 16px 16px 14px;
   box-shadow: 0 10px 24px rgba(26, 74, 110, 0.05);
 }
-[data-testid="column"]:has(.buddy-tile) .stButton {
+
+.buddy-tile-kicker {
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--buddy-tile-ink, #1a4a6e);
+}
+
+.buddy-tile-title {
+  font-size: 1.15rem;
+  font-weight: 750;
+  color: #1a4a6e;
+  margin: 8px 0 10px;
+  line-height: 1.3;
+}
+
+.buddy-tile-blurb {
+  color: #3d5a70;
+  font-size: 0.94rem;
+  line-height: 1.45;
+  flex: 1 1 auto;
+}
+
+[data-testid="stHorizontalBlock"]:has(.buddy-tile),
+.stHorizontalBlock:has(.buddy-tile) {
+  align-items: stretch !important;
+}
+
+[data-testid="column"]:has(.buddy-tile),
+[data-testid="stColumn"]:has(.buddy-tile) {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+[data-testid="column"]:has(.buddy-tile) > div,
+[data-testid="stColumn"]:has(.buddy-tile) > div,
+[data-testid="column"]:has(.buddy-tile) [data-testid="stVerticalBlock"],
+[data-testid="stColumn"]:has(.buddy-tile) [data-testid="stVerticalBlock"] {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  gap: 0 !important;
+}
+
+[data-testid="column"]:has(.buddy-tile) [data-testid="stVerticalBlock"] > div:has(.buddy-tile),
+[data-testid="stColumn"]:has(.buddy-tile) [data-testid="stVerticalBlock"] > div:has(.buddy-tile) {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0;
+}
+
+[data-testid="column"]:has(.buddy-tile) [data-testid="stMarkdownContainer"],
+[data-testid="column"]:has(.buddy-tile) .stMarkdown,
+[data-testid="stColumn"]:has(.buddy-tile) [data-testid="stMarkdownContainer"],
+[data-testid="stColumn"]:has(.buddy-tile) .stMarkdown {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  height: 100%;
+}
+
+[data-testid="column"]:has(.buddy-tile) .buddy-tile,
+[data-testid="stColumn"]:has(.buddy-tile) .buddy-tile {
+  border-radius: 20px 20px 0 0;
+  margin-bottom: 0;
+}
+
+[data-testid="column"]:has(.buddy-tile) [data-testid="stVerticalBlock"] > div:has(.stButton),
+[data-testid="stColumn"]:has(.buddy-tile) [data-testid="stVerticalBlock"] > div:has(.stButton) {
+  margin-top: auto;
+}
+
+[data-testid="column"]:has(.buddy-tile) .stButton,
+[data-testid="stColumn"]:has(.buddy-tile) .stButton {
   margin-top: 0;
 }
-[data-testid="column"]:has(.buddy-tile) .stButton > button {
-  background: #3D8BBF !important;
+
+[data-testid="column"]:has(.buddy-tile) .stButton > button,
+[data-testid="stColumn"]:has(.buddy-tile) .stButton > button {
+  background: #3d8bbf !important;
   color: #fff !important;
   border: none !important;
   border-radius: 0 0 18px 18px !important;
@@ -263,12 +353,41 @@ header[data-testid="stHeader"] {
 }
 
 /* What-if: one light card around gewicht / BMI / reset */
-.stApp:has(.buddy-whatif-flag) [data-testid="stVerticalBlockBorderWrapper"] {
+.stApp:has(.buddy-whatif-flag) [data-testid="stVerticalBlockBorderWrapper"],
+.stApp:has(.buddy-whatif-flag) [data-testid="stVerticalBlock"]:has([data-testid="stSlider"]) {
   background: #f3f8fc;
   border: 1px solid #d5e6f2 !important;
   border-radius: 20px !important;
   padding: 0.15rem 0.35rem 0.25rem;
   margin-bottom: 0.35rem;
+}
+
+.stApp:has(.buddy-whatif-flag) [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stHorizontalBlock"],
+.stApp:has(.buddy-whatif-flag) [data-testid="stHorizontalBlock"]:has([data-testid="stSlider"]):has(.stButton) {
+  align-items: flex-end !important;
+}
+
+.stApp:has(.buddy-whatif-flag) [data-testid="stHorizontalBlock"]:has([data-testid="stSlider"]) [data-testid="column"]:last-child,
+.stApp:has(.buddy-whatif-flag) [data-testid="stHorizontalBlock"]:has([data-testid="stSlider"]) [data-testid="stColumn"]:last-child {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-end !important;
+}
+
+.stApp:has(.buddy-whatif-flag) [data-testid="stHorizontalBlock"]:has([data-testid="stSlider"]) [data-testid="column"]:last-child .stButton,
+.stApp:has(.buddy-whatif-flag) [data-testid="stHorizontalBlock"]:has([data-testid="stSlider"]) [data-testid="stColumn"]:last-child .stButton {
+  margin: 0;
+}
+
+.stApp:has(.buddy-whatif-flag) [data-testid="stHorizontalBlock"]:has([data-testid="stSlider"]) [data-testid="column"]:last-child .stButton > button,
+.stApp:has(.buddy-whatif-flag) [data-testid="stHorizontalBlock"]:has([data-testid="stSlider"]) [data-testid="stColumn"]:last-child .stButton > button {
+  min-height: 2.5rem;
+  height: 2.5rem;
+  max-height: 2.5rem;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-radius: 999px !important;
+  font-weight: 650 !important;
 }
 
 .buddy-factor {

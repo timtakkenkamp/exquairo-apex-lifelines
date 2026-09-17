@@ -210,10 +210,10 @@ def render_intervention_tile(item: dict, payload: dict) -> None:
     blurb = item.get("summary") or item.get("explanation") or ""
     st.markdown(
         f"""
-<div class="buddy-tile" style="background:#fff;border:1px solid #d5e6f2;border-top:8px solid {colors["bar"]};border-radius:20px;padding:16px 16px 14px;min-height:168px;box-shadow:0 10px 24px rgba(26,74,110,0.05);">
-  <div style="font-size:0.75rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:{colors["ink"]};">{meta["label"]}</div>
-  <div style="font-size:1.15rem;font-weight:750;color:#1A4A6E;margin:8px 0 10px;line-height:1.3;">{item["title"]}</div>
-  <div style="color:#3D5A70;font-size:0.94rem;line-height:1.45;">{blurb}</div>
+<div class="buddy-tile" style="--buddy-tile-bar:{colors["bar"]};--buddy-tile-ink:{colors["ink"]};">
+  <div class="buddy-tile-kicker">{meta["label"]}</div>
+  <div class="buddy-tile-title">{item["title"]}</div>
+  <div class="buddy-tile-blurb">{blurb}</div>
 </div>
 """,
         unsafe_allow_html=True,
@@ -418,7 +418,7 @@ st.subheader("1. Je risico")
 st.markdown('<div class="buddy-whatif-flag" aria-hidden="true"></div>', unsafe_allow_html=True)
 with st.container(border=True):
     st.caption("Wat als je gewicht verandert?")
-    wcol, bcol, rcol = st.columns([3, 2, 1])
+    wcol, bcol, rcol = st.columns([3, 2, 1.05], vertical_alignment="bottom")
     with wcol:
         st.slider(
             "Gewicht (kg)",
@@ -438,8 +438,7 @@ with st.container(border=True):
             on_change=_sync_bmi_to_weight,
         )
     with rcol:
-        st.write("")
-        if st.button("Reset"):
+        if st.button("Reset", use_container_width=True):
             st.session_state.whatif_reset = True
             st.rerun()
 
@@ -470,9 +469,10 @@ for factor in top_local_factors(payload, limit=3):
 
 # 3) Doe dit — three tiles, ordered by this person's strongest factors
 st.subheader("3. Doe dit")
+st.markdown('<div class="buddy-tiles-flag" aria-hidden="true"></div>', unsafe_allow_html=True)
 cards = interventions_for_local_factors(payload, limit=3)
 if cards:
-    cols = st.columns(len(cards))
+    cols = st.columns(len(cards), gap="small")
     for col, item in zip(cols, cards):
         with col:
             render_intervention_tile(item, payload)
