@@ -67,7 +67,12 @@ Do not push this playground to `kyliekeijzer/exquairo-apex-lifelines`.
 
 ## Live models (stap 3)
 
-Sidebar toggle **Live model (Kylie A/B)** uses `models/model_{a,b}_best_logreg_elasticnet.joblib` via `live_model.py` + `model_adapter.py`. Persona feature snapshots live in `fixtures/persona-*-features.json`. Toggle off = mock fixtures.
+Sidebar toggle **Live model (final A/B)** uses the no-spline finals via `live_model.py` + `model_adapter.py`:
+
+- `models/model_a_best_logreg_elasticnet_no_spline_run1_final.joblib` (T1→T2)
+- `models/model_b_best_xgboost_no_spline_run1_final.joblib` (T1→T3)
+
+Persona feature snapshots live in `fixtures/persona-*-features.json`. The adapter derives `BRI_T1`, `NHDC_T1` and `THR_T1`. Toggle off = mock fixtures.
 
 ## Stap 4 — coaching API + guardrails
 

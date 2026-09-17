@@ -1,4 +1,4 @@
-"""Boris buddy — simple 3-step Streamlit demo (fork-only, no trained model)."""
+"""Boris buddy — 3-step Streamlit demo (mock fixtures or final A/B models)."""
 
 from __future__ import annotations
 
@@ -247,9 +247,9 @@ with st.sidebar:
     st.markdown("### Boris")
     use_live_default = models_available()
     use_live = st.toggle(
-        "Live model (Kylie A/B)",
+        "Live model (final A/B)",
         value=use_live_default,
-        help="Aan: voorspellingen uit joblib A/B. Uit: mock fixtures.",
+        help="Aan: final model A (elastic-net) en B (XGBoost). Uit: mock fixtures.",
         disabled=not use_live_default,
     )
     st.caption("Small steps. Big impact.")
@@ -343,7 +343,7 @@ with c1:
 with c2:
     render_risk(risks["t1_t3"], "Lange termijn")
 if use_live:
-    st.caption("Live Kylie-modellen A/B (elastic-net). Proxy diabetes / HbA1c > 6,5%. Geen diagnose.")
+    st.caption("Final modellen A (elastic-net) en B (XGBoost). Proxy diabetes / HbA1c > 6,5%. Geen diagnose.")
 else:
     st.caption("Mock-cijfers. Klein lettertje: kans dat HbA1c boven 6,5% uitkomt. Geen diagnose.")
 

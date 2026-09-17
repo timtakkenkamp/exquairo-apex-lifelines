@@ -1,4 +1,4 @@
-"""Step 3: overlay Kylie A/B model predictions onto Boris persona payloads."""
+"""Overlay final A/B model predictions onto Boris persona payloads."""
 
 from __future__ import annotations
 
@@ -7,7 +7,14 @@ import json
 from pathlib import Path
 from typing import Any
 
-from model_adapter import FEATURE_COLS, predict_diabetes_risks
+from model_adapter import (
+    FEATURE_COLS,
+    MODEL_A_FILE,
+    MODEL_B_FILE,
+    body_roundness_index,
+    models_on_disk,
+    predict_diabetes_risks,
+)
 
 ROOT = Path(__file__).resolve().parent
 FIXTURES = ROOT / "fixtures"
@@ -15,8 +22,11 @@ FIXTURES = ROOT / "fixtures"
 # Map model feature ids → buddy factor ids / themes when possible
 _FEATURE_TO_FACTOR_ID = {
     "BMI_T1": "bmi",
+    "BRI_T1": "bmi",
     "WAIST_T1": "waist",
     "HIP_T1": "waist",
+    "NHDC_T1": "cho",
+    "THR_T1": "tgl",
     "HBAC_T1": "hbac",
     "SPORTS_T1": "sports",
     "CHO_T1": "cho",
@@ -27,14 +37,15 @@ _FEATURE_TO_FACTOR_ID = {
     "HTN_MED_T1": "htn_med",
     "AGE_T1": "age",
     "DEPRESSION_T1": "depression",
+    "BKR_T1": "bkr",
+    "HBF_T1": "hbf",
+    "EDUCATION_LOWER_T1": "education",
+    "RESPIRATORY_DISEASE_T1": "respiratory",
 }
 
 
 def models_available() -> bool:
-    models = ROOT.parents[1] / "models"
-    return (models / "model_a_best_logreg_elasticnet.joblib").exists() and (
-        models / "model_b_best_logreg_elasticnet.joblib"
-    ).exists()
+    return models_on_disk(ROOT.parents[1] / "models")
 
 
 def load_feature_snapshot(persona_id: str) -> dict[str, Any]:
@@ -64,11 +75,13 @@ def features_with_weight(
     old_bmi = float(feats.get("BMI_T1") or 25.0)
     new_bmi = weight_kg / (height_m**2)
     feats["BMI_T1"] = round(new_bmi, 2)
+    feats["HEIGHT_T1"] = height_cm
     # Keep waist coherent with weight change (~0.7 cm per kg), same heuristic as mock what-if
     if feats.get("WAIST_T1") is not None:
         old_weight = old_bmi * height_m**2
         delta_kg = weight_kg - old_weight
         feats["WAIST_T1"] = float(feats["WAIST_T1"]) + 0.7 * delta_kg
+        feats["BRI_T1"] = body_roundness_index(float(feats["WAIST_T1"]), height_cm)
     return feats
 
 
@@ -93,19 +106,19 @@ def overlay_live_predictions(
     p_short = float(pred["risk_t1_t2"])
     p_long = float(pred["risk_t1_t3"])
 
-    updated["source"] = "live_kylie_models"
+    updated["source"] = "live_final_models"
     updated["risks"] = [
         {
             "id": "t1_t2",
             "horizon": "Korte-termijn risico op diabetes",
-            "label": "Live model A (T1→T2). Proxy: kans op diabetes / HbA1c > 6,5%. Geen diagnose.",
+            "label": "Final model A (T1→T2, elastic-net). Proxy: kans op diabetes / HbA1c > 6,5%. Geen diagnose.",
             "risk_score": round(p_short, 4),
             "risk_label": _band(p_short),
         },
         {
             "id": "t1_t3",
             "horizon": "Lange-termijn risico op diabetes",
-            "label": "Live model B (T1→T3). Proxy: kans op diabetes / HbA1c > 6,5%. Geen diagnose.",
+            "label": "Final model B (T1→T3, XGBoost). Proxy: kans op diabetes / HbA1c > 6,5%. Geen diagnose.",
             "risk_score": round(p_long, 4),
             "risk_label": _band(p_long),
         },
@@ -125,7 +138,7 @@ def overlay_live_predictions(
                 "importance": round(float(f.get("share") or f.get("importance") or 0), 4),
                 "patient_value": f"{f.get('patient_value')}",
                 "unit": f.get("unit") or None,
-                "note": "Lokale bijdrage uit live elastic-net (coef × geschaalde waarde).",
+                "note": "Lokale bijdrage uit final model A (elastic-net, coef × geschaalde waarde).",
             }
         )
     updated["top_factors"] = top_factors
@@ -154,8 +167,8 @@ def overlay_live_predictions(
     }
     updated["live_model"] = {
         "enabled": True,
-        "model_a": "model_a_best_logreg_elasticnet.joblib",
-        "model_b": "model_b_best_logreg_elasticnet.joblib",
+        "model_a": MODEL_A_FILE,
+        "model_b": MODEL_B_FILE,
         "features_used": FEATURE_COLS,
     }
     return updated

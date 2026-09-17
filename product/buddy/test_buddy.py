@@ -161,6 +161,25 @@ class GuardrailTests(unittest.TestCase):
         self.assertEqual(text, DEFLECT_MESSAGE)
 
 
+class FinalModelOverlayTests(unittest.TestCase):
+    def test_live_final_models_score_all_personas(self):
+        from live_model import models_available, overlay_live_predictions
+
+        if not models_available():
+            self.skipTest("final A/B joblibs not on disk")
+        for payload in load_personas():
+            live = overlay_live_predictions(payload)
+            self.assertEqual(live["source"], "live_final_models")
+            self.assertTrue(live["live_model"]["model_a"].endswith("run1_final.joblib"))
+            self.assertTrue(live["live_model"]["model_b"].endswith("run1_final.joblib"))
+            self.assertEqual(len(live["risks"]), 2)
+            for risk in live["risks"]:
+                self.assertGreaterEqual(risk["risk_score"], 0.0)
+                self.assertLessEqual(risk["risk_score"], 1.0)
+            self.assertGreaterEqual(len(live["top_factors"]), 3)
+            self.assertEqual(len(interventions_for_local_factors(live, 3)), 3)
+
+
 class OpenAIHookTests(unittest.TestCase):
     def test_resolve_openai_api_key_prefers_argument(self):
         self.assertEqual(resolve_openai_api_key("  sk-demo  ", "sk-other"), "sk-demo")
