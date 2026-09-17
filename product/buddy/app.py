@@ -160,10 +160,13 @@ with st.sidebar:
     baseline = by_id[persona_id]
     body = persona_body(baseline)
     st.session_state.whatif_height_cm = body["height_cm"]
-    if st.session_state.get("whatif_persona") != persona_id:
+    persona_changed = st.session_state.get("whatif_persona") != persona_id
+    resetting = st.session_state.pop("whatif_reset", False)
+    if persona_changed or resetting:
         st.session_state.whatif_persona = persona_id
         st.session_state.whatif_weight = round(body["weight_kg"], 1)
         st.session_state.whatif_bmi = round(body["bmi"], 1)
+    if persona_changed:
         st.session_state.chat = []
         st.session_state.chat_persona = persona_id
 
@@ -231,8 +234,7 @@ with bcol:
 with rcol:
     st.write("")
     if st.button("Reset", help="Terug naar het startgewicht van deze persona"):
-        st.session_state.whatif_weight = round(body["weight_kg"], 1)
-        st.session_state.whatif_bmi = round(body["bmi"], 1)
+        st.session_state.whatif_reset = True
         st.rerun()
 
 if whatif.get("active"):
