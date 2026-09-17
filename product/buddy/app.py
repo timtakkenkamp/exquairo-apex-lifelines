@@ -421,7 +421,6 @@ if AUDIENCE:
     if picked and picked != persona_id:
         st.session_state.audience_persona = picked
         st.rerun()
-st.caption("Drie stappen: je risico → waarom jij → doe dit.")
 
 # 1) Risico — slider first so the two big numbers stay live
 st.subheader("1. Je risico")
@@ -472,12 +471,6 @@ with c1:
     render_risk(risks["t1_t2"], "Korte termijn")
 with c2:
     render_risk(risks["t1_t3"], "Lange termijn")
-if AUDIENCE:
-    st.caption("Klein lettertje: kans dat HbA1c boven 6,5% uitkomt. Geen diagnose.")
-elif use_live:
-    st.caption("Final modellen A (elastic-net) en B (XGBoost). Proxy diabetes / HbA1c > 6,5%. Geen diagnose.")
-else:
-    st.caption("Mock-cijfers. Klein lettertje: kans dat HbA1c boven 6,5% uitkomt. Geen diagnose.")
 
 # 2) Waarom jij — max 3
 st.subheader("2. Waarom jij")
@@ -486,7 +479,6 @@ for factor in top_local_factors(payload, limit=3):
 
 # 3) Doe dit — three tiles, ordered by this person's strongest factors
 st.subheader("3. Doe dit")
-st.caption("Drie tegels, toegespitst op jouw sterkste lokale factoren. Klik er één open voor het stappenplan.")
 cards = interventions_for_local_factors(payload, limit=3)
 if cards:
     cols = st.columns(len(cards))
@@ -499,12 +491,11 @@ st.subheader("4. Vraag het Boris")
 if "chat" not in st.session_state or st.session_state.get("chat_persona") != persona_id:
     st.session_state.chat = []
     st.session_state.chat_persona = persona_id
-if AUDIENCE:
-    st.caption("Stel een vraag over wandelen, eten, slapen, roken of alcohol.")
-elif openai_key:
-    st.caption(f"Verbonden met OpenAI · {OPENAI_MODEL}")
-else:
-    st.caption("Geen API-sleutel. Plak er een in de sidebar — tot die tijd vaste teksten.")
+if not AUDIENCE:
+    if openai_key:
+        st.caption(f"Verbonden met OpenAI · {OPENAI_MODEL}")
+    else:
+        st.caption("Geen API-sleutel. Plak er een in de sidebar — tot die tijd vaste teksten.")
 with st.form("ask_buddy", clear_on_submit=True):
     question = st.text_input(
         "Je vraag",
@@ -534,5 +525,3 @@ for q, reply, source in st.session_state.chat:
             st.caption("Sleutel geweigerd")
         else:
             st.caption("Vaste tekst")
-
-st.caption("Demo met Boris. Geen diagnose, geen triage, geen recept.")
