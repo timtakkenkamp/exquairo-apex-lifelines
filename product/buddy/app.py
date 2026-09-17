@@ -92,11 +92,11 @@ def personas() -> list[dict]:
     return [by_id[pid] for pid in PERSONA_ORDER if pid in by_id]
 
 
-def render_header() -> None:
+def render_header(*, audience: bool = False) -> None:
     left, right = st.columns([1, 4])
     with left:
         if MASCOT_FILE.exists():
-            st.image(str(MASCOT_FILE), width=110)
+            st.image(str(MASCOT_FILE), width=96)
         else:
             st.markdown(
                 """
@@ -113,16 +113,25 @@ def render_header() -> None:
             )
             st.caption("Zet later `assets/boris-mascot.png` hier.")
     with right:
-        st.markdown(
-            """
-<div style="padding-top:8px;">
-  <div style="font-size:0.78rem;letter-spacing:0.08em;text-transform:uppercase;color:#3D8BBF;font-weight:700;">Met Boris</div>
-  <div style="font-size:1.65rem;font-weight:750;color:#1A4A6E;line-height:1.2;">Small steps. Big impact.</div>
-  <div style="color:#4A6A80;margin-top:4px;">Kleine stappen. Grote impact. Met Boris.</div>
+        if audience:
+            st.markdown(
+                """
+<div style="padding-top:18px;">
+  <div style="font-size:1.35rem;font-weight:750;color:#1A4A6E;line-height:1.25;">Kleine stappen. Grote impact.</div>
 </div>
 """,
-            unsafe_allow_html=True,
-        )
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                """
+<div style="padding-top:12px;">
+  <div style="font-size:0.78rem;letter-spacing:0.08em;text-transform:uppercase;color:#3D8BBF;font-weight:700;">Met Boris</div>
+  <div style="font-size:1.35rem;font-weight:750;color:#1A4A6E;line-height:1.25;">Kleine stappen. Grote impact.</div>
+</div>
+""",
+                unsafe_allow_html=True,
+            )
 
 
 def render_risk(risk: dict, short_title: str) -> None:
@@ -179,17 +188,13 @@ def render_intervention_tile(item: dict, payload: dict) -> None:
     theme = item.get("theme") or "sport"
     meta = THEME_META.get(theme, {"label": "Stap"})
     colors = THEME_COLORS.get(theme, THEME_COLORS["sport"])
-    links = linked_factor_labels(item, payload)
-    why = item.get("explanation") or item.get("summary") or ""
-    how = item.get("how") or ""
+    blurb = item.get("summary") or item.get("explanation") or ""
     st.markdown(
         f"""
-<div style="background:#fff;border:1px solid #d5e6f2;border-top:8px solid {colors["bar"]};border-radius:20px;padding:16px 16px 8px;min-height:280px;box-shadow:0 10px 24px rgba(26,74,110,0.05);">
+<div class="buddy-tile" style="background:#fff;border:1px solid #d5e6f2;border-top:8px solid {colors["bar"]};border-radius:20px;padding:16px 16px 14px;min-height:168px;box-shadow:0 10px 24px rgba(26,74,110,0.05);">
   <div style="font-size:0.75rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:{colors["ink"]};">{meta["label"]}</div>
   <div style="font-size:1.15rem;font-weight:750;color:#1A4A6E;margin:8px 0 10px;line-height:1.3;">{item["title"]}</div>
-  <div style="color:#3D5A70;font-size:0.94rem;line-height:1.45;margin-bottom:10px;">{why}</div>
-  <div style="color:#1A3348;font-size:0.9rem;line-height:1.45;margin-bottom:10px;"><strong>Hoe:</strong> {how}</div>
-  <div style="font-size:0.8rem;color:#5A7A90;">Past bij jou: {", ".join(links) or "je lokale factoren"}</div>
+  <div style="color:#3D5A70;font-size:0.94rem;line-height:1.45;">{blurb}</div>
 </div>
 """,
         unsafe_allow_html=True,
@@ -205,14 +210,18 @@ def render_intervention_tile(item: dict, payload: dict) -> None:
         st.rerun()
 
 
-def render_detail_page(theme: str, patient_name: str) -> None:
+def render_detail_page(theme: str, patient_name: str, payload: dict) -> None:
     page = get_intervention_page(theme)
     colors = THEME_COLORS.get(theme, THEME_COLORS["sport"])
+    item = next(
+        (card for card in (payload.get("interventions") or []) if card.get("theme") == theme),
+        None,
+    )
     if st.button("← Terug naar Boris", key="back_home"):
         st.session_state.buddy_view = "home"
         st.session_state.detail_theme = None
         st.rerun()
-    render_header()
+    render_header(audience=AUDIENCE)
     st.caption(page["kicker"])
     st.title(page["title"])
     st.markdown(
@@ -226,6 +235,13 @@ def render_detail_page(theme: str, patient_name: str) -> None:
     )
     st.subheader("Waarom dit helpt")
     st.write(page["why"])
+    if item and item.get("how"):
+        st.subheader("Hoe")
+        st.write(item["how"])
+    if item:
+        links = linked_factor_labels(item, payload)
+        if links:
+            st.caption("Past bij jou: " + ", ".join(links))
     st.caption("Coaching, geen medicijn en geen triage.")
     st.subheader(page["route_name"])
     for i, step in enumerate(page.get("route_steps") or [], start=1):
@@ -261,31 +277,7 @@ def _secrets_openai_key() -> str:
         return ""
 
 
-payloads = personas()
-by_id = {p["patient"]["persona_id"]: p for p in payloads}
-
-with st.sidebar:
-    st.markdown("### Boris")
-    use_live_default = models_available()
-    if AUDIENCE:
-        use_live = use_live_default
-        st.caption("Small steps. Big impact.")
-    else:
-        use_live = st.toggle(
-            "Live model (final A/B)",
-            value=use_live_default,
-            help="Aan: final model A (elastic-net) en B (XGBoost). Uit: mock fixtures.",
-            disabled=not use_live_default,
-        )
-        st.caption("Small steps. Big impact.")
-    st.markdown("**Wie ben jij?**")
-    persona_id = st.radio(
-        "Demo-persona",
-        options=list(by_id),
-        format_func=lambda pid: by_id[pid]["patient"]["display_name"],
-        label_visibility="collapsed",
-    )
-    baseline = by_id[persona_id]
+def apply_persona_state(persona_id: str, baseline: dict) -> None:
     body = persona_body(baseline)
     st.session_state.whatif_height_cm = body["height_cm"]
     persona_changed = st.session_state.get("whatif_persona") != persona_id
@@ -299,14 +291,44 @@ with st.sidebar:
         st.session_state.chat_persona = persona_id
         st.session_state.buddy_view = "home"
         st.session_state.detail_theme = None
-    patient = baseline["patient"]
-    st.caption(f"{patient['display_name']}, {patient.get('age', '—')} · start {body['weight_kg']:.0f} kg")
-    stored_key = _secrets_openai_key()
-    if "system_prompt" not in st.session_state:
-        st.session_state.system_prompt = load_default_system_prompt()
-    if st.session_state.pop("system_prompt_reset", False):
-        st.session_state.system_prompt = load_default_system_prompt()
-    if not AUDIENCE:
+
+
+payloads = personas()
+by_id = {p["patient"]["persona_id"]: p for p in payloads}
+use_live_default = models_available()
+if "system_prompt" not in st.session_state:
+    st.session_state.system_prompt = load_default_system_prompt()
+if st.session_state.pop("system_prompt_reset", False):
+    st.session_state.system_prompt = load_default_system_prompt()
+
+if AUDIENCE:
+    use_live = use_live_default
+    persona_id = st.session_state.get("audience_persona") or PERSONA_ORDER[0]
+    if persona_id not in by_id:
+        persona_id = PERSONA_ORDER[0]
+else:
+    with st.sidebar:
+        st.markdown("### Boris")
+        use_live = st.toggle(
+            "Live model (final A/B)",
+            value=use_live_default,
+            help="Aan: final model A (elastic-net) en B (XGBoost). Uit: mock fixtures.",
+            disabled=not use_live_default,
+        )
+        st.caption("Small steps. Big impact.")
+        st.markdown("**Wie ben jij?**")
+        persona_id = st.radio(
+            "Demo-persona",
+            options=list(by_id),
+            format_func=lambda pid: by_id[pid]["patient"]["display_name"],
+            label_visibility="collapsed",
+        )
+        stored_key = _secrets_openai_key()
+        st.caption(
+            f"{by_id[persona_id]['patient']['display_name']}, "
+            f"{by_id[persona_id]['patient'].get('age', '—')} · "
+            f"start {persona_body(by_id[persona_id])['weight_kg']:.0f} kg"
+        )
         with st.expander("OpenAI-sleutel", expanded=not openai_key_configured(stored_key)):
             st.text_input(
                 "OpenAI API key",
@@ -329,8 +351,9 @@ with st.sidebar:
             st.query_params["demo"] = "1"
             st.rerun()
         st.caption("Of plak `?demo=1` achter de URL. Keuken (key, prompt, live-toggle) gaat dan weg.")
-    else:
-        st.caption("Zaalweergave. Haal `?demo=1` uit de URL voor de werkplaats.")
+
+baseline = by_id[persona_id]
+apply_persona_state(persona_id, baseline)
 
 openai_key = resolve_openai_api_key(
     st.session_state.get("openai_api_key"),
@@ -348,11 +371,28 @@ else:
 patient = payload["patient"]
 
 if st.session_state.get("buddy_view") == "detail":
-    render_detail_page(st.session_state.get("detail_theme") or "sport", patient["display_name"])
+    render_detail_page(
+        st.session_state.get("detail_theme") or "sport",
+        patient["display_name"],
+        payload,
+    )
     st.stop()
 
-render_header()
+render_header(audience=AUDIENCE)
 st.title(f"Hoi {patient['display_name']}")
+if AUDIENCE:
+    st.markdown('<div class="buddy-pills-flag" aria-hidden="true"></div>', unsafe_allow_html=True)
+    picked = st.pills(
+        "Wie ben jij?",
+        options=list(by_id),
+        format_func=lambda pid: by_id[pid]["patient"]["display_name"],
+        key="audience_persona_pills",
+        default=persona_id,
+        label_visibility="collapsed",
+    )
+    if picked and picked != persona_id:
+        st.session_state.audience_persona = picked
+        st.rerun()
 st.caption("Drie stappen: je risico → waarom jij → doe dit.")
 
 # 1) Risico — slider first so the two big numbers stay live
@@ -421,7 +461,11 @@ elif openai_key:
 else:
     st.caption("Geen API-sleutel. Plak er een in de sidebar — tot die tijd vaste teksten.")
 with st.form("ask_buddy", clear_on_submit=True):
-    question = st.text_input("Je vraag", placeholder=CHAT_PLACEHOLDER)
+    question = st.text_input(
+        "Je vraag",
+        placeholder=CHAT_PLACEHOLDER,
+        label_visibility="collapsed",
+    )
     asked = st.form_submit_button("Vraag")
 if asked:
     history = [(prev_q, prev_a) for prev_q, prev_a, _src in st.session_state.chat]
@@ -446,7 +490,4 @@ for q, reply, source in st.session_state.chat:
         else:
             st.caption("Vaste tekst")
 
-st.caption(
-    "Demo met Boris. Geen diagnose, geen triage, geen recept. "
-    + (payload.get("disclaimer") or "")
-)
+st.caption("Demo met Boris. Geen diagnose, geen triage, geen recept.")

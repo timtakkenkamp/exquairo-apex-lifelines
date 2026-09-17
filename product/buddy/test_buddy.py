@@ -135,6 +135,9 @@ class SimplifyTests(unittest.TestCase):
         self.assertIn("audience_mode", app)
         self.assertIn('query_params.get("demo"', app)
         self.assertTrue((EXAMPLE_CONTRACT.parent / "assets" / "boris-mascot.png").is_file())
+        self.assertIn('class="buddy-tile"', app)
+        self.assertIn("Past bij jou", app)
+        self.assertIn("audience_persona_pills", app)
 
 
 class CopyTests(unittest.TestCase):
@@ -323,6 +326,11 @@ class SystemPromptTests(unittest.TestCase):
         self.assertFalse(any("OpenAI API key" in (i.label or "") for i in demo.text_input))
         self.assertIn("Hoi Pietje", [t.value for t in demo.title])
         self.assertIn("4. Vraag het Boris", [s.value for s in demo.subheader])
+        self.assertTrue(len(demo.pills) >= 1)
+        blob = " ".join(str(m.value) for m in demo.markdown)
+        self.assertIn("Kleine stappen. Grote impact.", blob)
+        self.assertNotIn("Small steps. Big impact.", blob)
+        self.assertNotIn("<strong>Hoe:</strong>", blob)
 
     def test_empty_question_matches_chat_copy(self):
         river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")

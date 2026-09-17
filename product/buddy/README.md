@@ -20,7 +20,7 @@ streamlit run product/buddy/app.py
 
 Open the URL Streamlit prints (usually http://localhost:8501). Sidebar: **Pietje / Sam / Noor**.
 
-**Zaalweergave (optie 2):** `http://localhost:8501/?demo=1` of de knop **Zaalweergave** in de werkplaats-sidebar. Dan verdwijnen live-toggle, API-key en system prompt. Persona + 3 stappen + chat blijven. Key komt uit `secrets.toml` / `OPENAI_API_KEY`. Zonder `?demo=1` is het de werkplaats.
+**Zaalweergave:** `http://localhost:8501/?demo=1` of de knop **Zaalweergave** in de werkplaats-sidebar. Sidebar is weg; persona is drie pillen onder *Hoi Pietje*. Key komt uit `secrets.toml` / `OPENAI_API_KEY`. Zonder `?demo=1` is het de werkplaats.
 
 ## What was simplified
 
