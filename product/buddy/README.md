@@ -18,15 +18,15 @@ pip install -r product/buddy/requirements.txt
 streamlit run product/buddy/app.py
 ```
 
-Open the URL Streamlit prints (usually http://localhost:8501). Sidebar: **River / Sam / Noor**.
+Open the URL Streamlit prints (usually http://localhost:8501). Sidebar: **Pietje / Sam / Noor**.
 
 ## What was simplified
 
 | Before | Now |
 | --- | --- |
-| Long home, English leftovers, always-on ask box | 3-step Dutch home, ask-box in **Vraag het Boris** expander |
+| Long home, English leftovers | 3-step Dutch home + always-visible **Vraag het Boris** chat |
 | 5 local factors | Max **3** (*verhoogt/verlaagt je risico op diabetes*) |
-| Three equal cards | **One primary CTA** (River → Groningen walk) + max 2 extra |
+| Three equal cards | **Three tiles** again, ordered by this person’s strongest factors |
 | Cream/coral chrome | Boris sky-blue + sprout green |
 
 Official mascot: drop `product/buddy/assets/boris-mascot.png`. Until then the app uses a placeholder robot + sprout. See `assets/README.md`.
@@ -36,7 +36,7 @@ Official mascot: drop `product/buddy/assets/boris-mascot.png`. Until then the ap
 - Two big numbers: korte- / lange-termijn risico op diabetes (HbA1c > 6.5% only as small disclaimer)
 - Weight/BMI what-if (live risks + bars)
 - Movement detail: Groningen Plantsoen–gracht–Martini-lus + back
-- Personas River / Sam / Noor
+- Personas Pietje / Sam / Noor
 - Guardrails: no meds, no triage
 - Chat via OpenAI when a key is present (sidebar, `.streamlit/secrets.toml`, or `OPENAI_API_KEY`); otherwise Dutch templates
 

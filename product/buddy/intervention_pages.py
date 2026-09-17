@@ -16,7 +16,7 @@ MOVEMENT_GRONINGEN: dict[str, Any] = {
     ),
     "why": (
         "Regelmatig wandelen is een leefstijlknop die vaak samenhangt met gewicht, taille "
-        "en hoe je lichaam suiker verwerkt. Deze demo koppelt dat aan een lager "
+        "en hoe je lichaam suiker verwerkt. Deze demo koppelt dat aan een rustiger "
         "korte- en lange-termijn risico-beeld (proxy: HbA1c). Het is coaching, "
         "geen diagnose en geen trainingsvoorschrift."
     ),
@@ -34,9 +34,9 @@ MOVEMENT_GRONINGEN: dict[str, Any] = {
     "tip": "Regendag? Doe alleen het plantsoenrondje (15–20 min) en streep de week niet weg.",
 }
 
-FOOD_STUB: dict[str, Any] = {
+FOOD_PAGE: dict[str, Any] = {
     "theme": "food",
-    "kicker": "Voeding · voorstel (stub)",
+    "kicker": "Voeding · één vaste wissel",
     "title": "Eén suikerdrank minder, dezelfde koffieafspraak",
     "coach": (
         "Niet een heel dieet omgooien. Kies één vast moment — bijvoorbeeld de middag op het Forum "
@@ -50,18 +50,20 @@ FOOD_STUB: dict[str, Any] = {
     "when": "Kies één vast moment per dag, zeven dagen achter elkaar.",
     "duration": "De wissel zelf duurt geen extra tijd — alleen de keuze.",
     "intensity": "Klein en saai is beter dan streng en kort.",
-    "route_name": "Eerste stap",
+    "route_name": "Zo pak je de week",
     "route_steps": [
         "Schrijf op welk drankje je meestal neemt (frisdrank, sap, zoete koffie).",
-        "Zet het alternatief al klaar: fles water of thee.",
-        "Vink één dag af. Morgen hetzelfde moment.",
+        "Zet het alternatief al klaar: fles water of thee zonder suiker.",
+        "Kies het moment dat het vaakst misgaat — middagdip of ná het eten.",
+        "Vink zeven dagen af. Pas daarna mag je een tweede wissel bedenken.",
+        "Eet in rust: bord op tafel, niet staand bij de koelkast.",
     ],
-    "tip": "Uitgebreide weekmenu’s komen later — dit scherm is expres een stub.",
+    "tip": "Uit eten? Zelfde regel: één drankje zonder suiker, de rest van de afspraak blijft hetzelfde.",
 }
 
-SLEEP_STUB: dict[str, Any] = {
+SLEEP_PAGE: dict[str, Any] = {
     "theme": "sleep",
-    "kicker": "Slaap · voorstel (stub)",
+    "kicker": "Slaap · vast ritueel",
     "title": "Telefoon de kamer uit, dezelfde bedtijd",
     "coach": (
         "Slaap is geen prestatie. Een vast avondritueel maakt de dag kleiner, "
@@ -74,20 +76,74 @@ SLEEP_STUB: dict[str, Any] = {
     "when": "Dertig minuten voor je gekozen bedtijd, vijf avonden deze week.",
     "duration": "30 minuten schermvrij — niet meer.",
     "intensity": "Licht dimmen, geen extra oefeningen verplicht.",
-    "route_name": "Eerste stap",
+    "route_name": "Avondritueel",
     "route_steps": [
         "Kies een bedtijd die je twee avonden achter elkaar kunt herhalen.",
         "Leg de telefoon in een andere kamer, niet op het nachtkastje.",
+        "Zet een wekker in die andere kamer — ochtend telt ook.",
         "Doe één rustig ding: thee, boek, of alleen het licht lager.",
+        "Late avond gehad? Volgende nacht dezelfde tijd, geen uitslaapmarathon.",
     ],
-    "tip": "Stub: later kunnen we dit koppelen aan jouw slaapfactor.",
+    "tip": "Lukt vijf avonden niet? Begin met woensdag tot en met vrijdag. Weekend mag later.",
+}
+
+SMOKING_PAGE: dict[str, Any] = {
+    "theme": "smoking",
+    "kicker": "Rookvrij · twee blokken",
+    "title": "Twee rookvrije dagen die je zelf kiest",
+    "coach": (
+        "Geen stoppen-met-roken-kuur hier. Wel twee blokken die je vooraf kiest. "
+        "Hulpmiddelen en ontwenning horen bij je zorgteam."
+    ),
+    "why": (
+        "Roken is in deze demo een lokale leefstijlknop. Minder rookmomenten "
+        "kunnen het risico-beeld rustiger maken. Dat is coaching, geen behandeling."
+    ),
+    "when": "Twee dagen die je van tevoren in je agenda zet.",
+    "duration": "De hele dag rookvrij — of twee vaste blokken van vier uur als een hele dag te groot is.",
+    "intensity": "Geen wilskrachtwedstrijd. Kies dagen waarop de fietsrit al staat.",
+    "route_name": "Zo kies je de blokken",
+    "route_steps": [
+        "Kies twee dagen (bijvoorbeeld dinsdag en donderdag).",
+        "Bescherm de fietsrit of wandeling op die dagen — handen en hoofd hebben iets anders te doen.",
+        "Zet kauwgom, water of een korte ommetje klaar voor het gebruikelijke moment.",
+        "Vertel één persoon welke dagen het zijn.",
+        "Wil je verder stoppen? Dat gesprek is voor je arts of praktijkondersteuner.",
+    ],
+    "tip": "Een uitglijder is geen reset. De volgende gekozen dag telt gewoon weer.",
+}
+
+ALCOHOL_PAGE: dict[str, Any] = {
+    "theme": "alcohol",
+    "kicker": "Alcohol · twee avonden",
+    "title": "Twee doordeweekse avonden zonder alcohol",
+    "coach": (
+        "Geen verbod. Twee avonden met bruiswater dat je echt lust, "
+        "zodat de rest van de week herkenbaar blijft."
+    ),
+    "why": (
+        "Alcoholpatroon is in deze demo een lokale knop. Twee rustige avonden "
+        "zijn een herhaalbare leefstijlstap, geen behandeling van alcoholgebruik."
+    ),
+    "when": "Twee doordeweekse avonden, vooraf gekozen.",
+    "duration": "De avond zelf — vanaf thuiskomen tot slapen.",
+    "intensity": "Laag. Weekend mag het oude patroon zijn tot deze twee avonden vanzelfsprekend voelen.",
+    "route_name": "Avond zonder glas",
+    "route_steps": [
+        "Zet woensdag en donderdag (of twee andere avonden) in de agenda.",
+        "Zet het alternatief al klaar: bruiswater, thee, of een glas dat je mooi vindt.",
+        "Houd de rest van de avond hetzelfde: eten, serie, bedtijd.",
+        "Boodschap gedaan? Koop die twee avonden geen extra fles ‘voor het geval dat’.",
+        "Vragen over minderen of stoppen horen bij je zorgverlener, niet bij Boris.",
+    ],
+    "tip": "Eén avond gelukt is winst. Tel niet meteen de hele maand.",
 }
 
 GENERIC_STUB: dict[str, Any] = {
     "theme": "generic",
-    "kicker": "Leefstijl · voorstel (stub)",
+    "kicker": "Leefstijl · kleine stap",
     "title": "Eén kleine herhaalbare stap",
-    "coach": "We werken dit thema later uit. Voor nu: kies één ding dat je morgen opnieuw kunt doen.",
+    "coach": "Kies één ding dat je morgen opnieuw kunt doen. Geen schema, geen kuur.",
     "why": "Leefstijlknoppen horen bij het demobeeld, niet bij medicatie of triage.",
     "when": "Morgen, op een vast tijdstip.",
     "duration": "Tien minuten is genoeg om te starten.",
@@ -102,22 +158,10 @@ GENERIC_STUB: dict[str, Any] = {
 
 PAGES = {
     "sport": MOVEMENT_GRONINGEN,
-    "food": FOOD_STUB,
-    "sleep": SLEEP_STUB,
-    "smoking": {
-        **GENERIC_STUB,
-        "theme": "smoking",
-        "kicker": "Rookvrij · voorstel (stub)",
-        "title": "Twee rookvrije blokken deze week",
-        "coach": "Geen stoppen-met-roken-kuur hier. Wel twee blokken die je zelf kiest — de fietsrit telt mee.",
-    },
-    "alcohol": {
-        **GENERIC_STUB,
-        "theme": "alcohol",
-        "kicker": "Alcohol · voorstel (stub)",
-        "title": "Twee avonden zonder alcohol",
-        "coach": "Geen verbod. Twee doordeweekse avonden met bruiswater dat je echt lust.",
-    },
+    "food": FOOD_PAGE,
+    "sleep": SLEEP_PAGE,
+    "smoking": SMOKING_PAGE,
+    "alcohol": ALCOHOL_PAGE,
 }
 
 

@@ -18,6 +18,7 @@ from buddy_lib import (
     load_payload,
     load_personas,
     optional_llm_reply,
+    interventions_for_local_factors,
     pick_primary_intervention,
     resolve_openai_api_key,
     top_local_factors,
@@ -36,6 +37,8 @@ class FixtureTests(unittest.TestCase):
         example = load_payload(EXAMPLE_CONTRACT)
         self.assertEqual(validate_payload(example), [])
         self.assertEqual(example["patient"]["persona_id"], "persona-river")
+        river = next(p for p in personas if p["patient"]["persona_id"] == "persona-river")
+        self.assertEqual(river["patient"]["display_name"], "Pietje")
 
     def test_local_factors_differ_across_personas(self):
         by_id = {p["patient"]["persona_id"]: p for p in load_personas()}
@@ -102,16 +105,24 @@ class InterventionPageTests(unittest.TestCase):
         self.assertIn("30", page["duration"])
         self.assertTrue(any("hb" in page["why"].lower() or "risico" in page["why"].lower() for _ in [0]))
         food = get_intervention_page("food")
-        self.assertIn("stub", food["kicker"].lower())
+        self.assertIn("suiker", food["title"].lower())
+        self.assertGreaterEqual(len(food["route_steps"]), 4)
+        self.assertNotIn("stub", food["kicker"].lower())
 
 
 class SimplifyTests(unittest.TestCase):
-    def test_three_factors_and_movement_primary_for_river(self):
+    def test_three_factor_tiles_for_pietje(self):
         river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")
         self.assertEqual(len(top_local_factors(river, 3)), 3)
+        cards = interventions_for_local_factors(river, 3)
+        self.assertEqual(len(cards), 3)
+        self.assertEqual([c["theme"] for c in cards], ["sport", "food", "sleep"])
         primary = pick_primary_intervention(river)
         self.assertIsNotNone(primary)
         self.assertEqual(primary["theme"], "sport")
+        app = (EXAMPLE_CONTRACT.parent / "app.py").read_text(encoding="utf-8")
+        self.assertIn("4. Vraag het Boris", app)
+        self.assertNotIn('st.expander("Vraag het Boris"', app)
 
 
 class CopyTests(unittest.TestCase):

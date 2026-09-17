@@ -6,7 +6,7 @@
 .block-container {
   padding-top: 1rem;
   padding-bottom: 2.4rem;
-  max-width: 980px;
+  max-width: 1120px;
 }
 
 div[data-testid="stChatInput"] {

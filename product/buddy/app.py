@@ -17,10 +17,10 @@ from buddy_lib import (
     openai_key_configured,
     pct,
     persona_body,
-    pick_primary_intervention,
+    interventions_for_local_factors,
+    linked_factor_labels,
     resolve_openai_api_key,
     risk_band_nl,
-    secondary_interventions,
     top_local_factors,
     validate_payload,
 )
@@ -152,6 +152,36 @@ def render_factor(factor: dict) -> None:
 """,
         unsafe_allow_html=True,
     )
+
+
+def render_intervention_tile(item: dict, payload: dict) -> None:
+    theme = item.get("theme") or "sport"
+    meta = THEME_META.get(theme, {"label": "Stap"})
+    colors = THEME_COLORS.get(theme, THEME_COLORS["sport"])
+    links = linked_factor_labels(item, payload)
+    why = item.get("explanation") or item.get("summary") or ""
+    how = item.get("how") or ""
+    st.markdown(
+        f"""
+<div style="background:#fff;border:1px solid #d5e6f2;border-top:8px solid {colors["bar"]};border-radius:20px;padding:16px 16px 8px;min-height:280px;box-shadow:0 10px 24px rgba(26,74,110,0.05);">
+  <div style="font-size:0.75rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:{colors["ink"]};">{meta["label"]}</div>
+  <div style="font-size:1.15rem;font-weight:750;color:#1A4A6E;margin:8px 0 10px;line-height:1.3;">{item["title"]}</div>
+  <div style="color:#3D5A70;font-size:0.94rem;line-height:1.45;margin-bottom:10px;">{why}</div>
+  <div style="color:#1A3348;font-size:0.9rem;line-height:1.45;margin-bottom:10px;"><strong>Hoe:</strong> {how}</div>
+  <div style="font-size:0.8rem;color:#5A7A90;">Past bij jou: {", ".join(links) or "je lokale factoren"}</div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+    cta = (
+        "Open de Groninger wandeling"
+        if item.get("id") == "activity-walks"
+        else f"Meer over {meta['label'].lower()}"
+    )
+    if st.button(cta, key=f"open_{item.get('id', theme)}", use_container_width=True):
+        st.session_state.buddy_view = "detail"
+        st.session_state.detail_theme = theme
+        st.rerun()
 
 
 def render_detail_page(theme: str, patient_name: str) -> None:
@@ -322,71 +352,46 @@ st.subheader("2. Waarom jij")
 for factor in top_local_factors(payload, limit=3):
     render_factor(factor)
 
-# 3) Doe dit — one primary CTA, max 3 cards
+# 3) Doe dit — three tiles, ordered by this person's strongest factors
 st.subheader("3. Doe dit")
-primary = pick_primary_intervention(payload)
-secondaries = secondary_interventions(payload, primary, limit=2)
-if primary:
-    theme = primary.get("theme") or "sport"
-    meta = THEME_META.get(theme, {"label": "Stap"})
-    colors = THEME_COLORS.get(theme, THEME_COLORS["sport"])
-    st.markdown(
-        f"""
-<div style="background:linear-gradient(135deg,{colors["soft"]},#fff 60%);border:1px solid #d5e6f2;border-radius:24px;padding:18px 18px 8px;margin-bottom:8px;">
-  <div style="font-size:0.75rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:{colors["ink"]};">Eerste stap · {meta["label"]}</div>
-  <div style="font-size:1.35rem;font-weight:750;color:#1A4A6E;margin:6px 0;">{primary["title"]}</div>
-  <div style="color:#3D5A70;">{primary["summary"]}</div>
-</div>
-""",
-        unsafe_allow_html=True,
-    )
-    cta = "Start de Groninger wandeling" if theme == "sport" else f"Open {meta['label'].lower()}"
-    if st.button(cta, type="primary", use_container_width=True):
-        st.session_state.buddy_view = "detail"
-        st.session_state.detail_theme = theme
-        st.rerun()
-
-if secondaries:
-    cols = st.columns(len(secondaries))
-    for col, item in zip(cols, secondaries):
-        theme = item.get("theme") or "sport"
-        meta = THEME_META.get(theme, {"label": theme})
+st.caption("Drie tegels, toegespitst op jouw sterkste lokale factoren. Klik er één open voor het stappenplan.")
+cards = interventions_for_local_factors(payload, limit=3)
+if cards:
+    cols = st.columns(len(cards))
+    for col, item in zip(cols, cards):
         with col:
-            st.markdown(f"**{meta['label']}** — {item['title']}")
-            if st.button("Open", key=f"open_{item.get('id', theme)}", use_container_width=True):
-                st.session_state.buddy_view = "detail"
-                st.session_state.detail_theme = theme
-                st.rerun()
+            render_intervention_tile(item, payload)
 
-with st.expander("Vraag het Boris", expanded=bool(st.session_state.get("chat"))):
-    if "chat" not in st.session_state or st.session_state.get("chat_persona") != persona_id:
-        st.session_state.chat = []
-        st.session_state.chat_persona = persona_id
-    if openai_key:
-        st.caption(f"Verbonden met OpenAI · {OPENAI_MODEL}")
-    else:
-        st.caption("Geen API-sleutel. Plak er een in de sidebar — tot die tijd vaste teksten.")
-    with st.form("ask_buddy", clear_on_submit=True):
-        question = st.text_input("Je vraag", placeholder="Wandelen, eten, slapen…")
-        asked = st.form_submit_button("Vraag")
-    if asked:
-        history = [(prev_q, prev_a) for prev_q, prev_a, _src in st.session_state.chat]
-        reply, source = answer_question(
-            question, payload, api_key=openai_key, history=history
-        )
-        st.session_state.chat.append((question, reply, source))
-    for q, reply, source in st.session_state.chat:
-        st.chat_message("user").write(q)
-        with st.chat_message("assistant"):
-            st.write(reply)
-            if source == "openai":
-                st.caption("OpenAI")
-            elif source.startswith("guardrail"):
-                st.caption("Guardrail — geen medisch advies")
-            elif source == "openai-auth":
-                st.caption("Sleutel geweigerd")
-            else:
-                st.caption("Vaste tekst")
+# 4) Chat — always visible
+st.subheader("4. Vraag het Boris")
+if "chat" not in st.session_state or st.session_state.get("chat_persona") != persona_id:
+    st.session_state.chat = []
+    st.session_state.chat_persona = persona_id
+if openai_key:
+    st.caption(f"Verbonden met OpenAI · {OPENAI_MODEL}")
+else:
+    st.caption("Geen API-sleutel. Plak er een in de sidebar — tot die tijd vaste teksten.")
+with st.form("ask_buddy", clear_on_submit=True):
+    question = st.text_input("Je vraag", placeholder="Wandelen, eten, slapen…")
+    asked = st.form_submit_button("Vraag")
+if asked:
+    history = [(prev_q, prev_a) for prev_q, prev_a, _src in st.session_state.chat]
+    reply, source = answer_question(
+        question, payload, api_key=openai_key, history=history
+    )
+    st.session_state.chat.append((question, reply, source))
+for q, reply, source in st.session_state.chat:
+    st.chat_message("user").write(q)
+    with st.chat_message("assistant"):
+        st.write(reply)
+        if source == "openai":
+            st.caption("OpenAI")
+        elif source.startswith("guardrail"):
+            st.caption("Guardrail — geen medisch advies")
+        elif source == "openai-auth":
+            st.caption("Sleutel geweigerd")
+        else:
+            st.caption("Vaste tekst")
 
 st.caption(
     "Demo met Boris. Geen diagnose, geen triage, geen recept. "

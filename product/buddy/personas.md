@@ -11,7 +11,7 @@ Patient-facing outcomes for every persona:
 
 ## persona-river — higher mock risk
 
-- **Display name:** River (they/them), 54 · 174 cm · start 94.5 kg · BMI 31.2
+- **Display name:** Pietje (hij/hem), 54 · 174 cm · start 94.5 kg · BMI 31.2
 - **Story:** Higher weight, little reported sport, mother with type 2 diabetes, patchy sleep.
 - **Mock risks:** short-term 48% medium · long-term 67% high
 - **Local factors:** BMI, weinig beweging, taille, familie T2DM, slaap (allen **verhoogt je risico op diabetes** in deze mock)
@@ -24,7 +24,7 @@ Patient-facing outcomes for every persona:
 - **Display name:** Sam (he/him), 42 · 178 cm · start 82.7 kg · BMI 26.1
 - **Story:** BMI mid-20s, cycles to work some days, smokes occasionally, drinks more than “none”.
 - **Mock risks:** short-term 27% medium · long-term 38% medium
-- **Local factors:** roken en alcohol **verhogen je risico op diabetes**; fietsen en woon-werkbeweging **verlagen** het; BMI is een mildere verhoging dan bij River
+- **Local factors:** roken en alcohol **verhogen je risico op diabetes**; fietsen en woon-werkbeweging **verlagen** het; BMI is een mildere verhoging dan bij Pietje
 - **Cards:** smoke-free days (plum), alcohol-free evenings (amber), protect the bike habit (sport)
 
 ## persona-noor — lower mock risk

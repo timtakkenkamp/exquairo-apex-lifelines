@@ -197,19 +197,61 @@ def top_local_factors(payload: dict[str, Any], limit: int = 3) -> list[dict[str,
 
 def pick_primary_intervention(payload: dict[str, Any]) -> dict[str, Any] | None:
     """Strongest *actionable* factor → matching lifestyle card (Movement often wins)."""
-    interventions = payload.get("interventions") or []
-    by_theme = {item.get("theme"): item for item in interventions}
-    for factor in top_local_factors(payload, limit=5):
-        theme = ACTIONABLE_THEME.get(factor.get("id"))
-        if theme and theme in by_theme:
-            return by_theme[theme]
-    return by_theme.get("sport") or (interventions[0] if interventions else None)
+    cards = interventions_for_local_factors(payload, limit=1)
+    return cards[0] if cards else None
 
 
 def secondary_interventions(payload: dict[str, Any], primary: dict[str, Any] | None, limit: int = 2) -> list[dict[str, Any]]:
     primary_id = (primary or {}).get("id")
-    extras = [item for item in payload.get("interventions") or [] if item.get("id") != primary_id]
+    extras = [item for item in interventions_for_local_factors(payload, limit=limit + 1) if item.get("id") != primary_id]
     return extras[:limit]
+
+
+def interventions_for_local_factors(payload: dict[str, Any], limit: int = 3) -> list[dict[str, Any]]:
+    """Up to `limit` unique lifestyle cards, ordered by this person's strongest factors."""
+    interventions = list(payload.get("interventions") or [])
+    if not interventions:
+        return []
+    by_theme = {item.get("theme"): item for item in interventions}
+    chosen: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def add(item: dict[str, Any] | None) -> None:
+        if not item or len(chosen) >= limit:
+            return
+        key = str(item.get("id") or item.get("theme") or id(item))
+        if key in seen:
+            return
+        seen.add(key)
+        chosen.append(item)
+
+    for factor in top_local_factors(payload, limit=8):
+        fid = factor.get("id")
+        theme = ACTIONABLE_THEME.get(fid)
+        if theme:
+            add(by_theme.get(theme))
+        for item in interventions:
+            if fid in (item.get("linked_factors") or []):
+                add(item)
+        if len(chosen) >= limit:
+            return chosen
+    for item in interventions:
+        add(item)
+        if len(chosen) >= limit:
+            break
+    return chosen
+
+
+def linked_factor_labels(item: dict[str, Any], payload: dict[str, Any]) -> list[str]:
+    labels_by_id = {
+        factor.get("id"): factor_display_label(factor) for factor in payload.get("top_factors") or []
+    }
+    out = []
+    for fid in item.get("linked_factors") or []:
+        label = labels_by_id.get(fid) or FACTOR_LABEL_NL.get(fid) or fid
+        if label not in out:
+            out.append(label)
+    return out
 
 
 def factor_share(factors: list[dict[str, Any]]) -> list[dict[str, Any]]:

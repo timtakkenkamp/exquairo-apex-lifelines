@@ -97,6 +97,8 @@
       "theme": "sport",
       "title": "Houd de training die je al fijn vindt",
       "summary": "Voeg geen volume toe om het volume. Bescherm twee sessies die je leuk vindt en zet ze in je agenda als vast.",
+      "explanation": "Sport verlaagt bij jou het risico-beeld. Dit is onderhoud: twee sessies die je al fijn vindt, niet nóg een schema.",
+      "how": "Zet twee bekende trainingen in je agenda als vast. Wordt er één geschrapt, schuif hem diezelfde week — geen inhaalmarathon.",
       "linked_factors": ["sports"]
     },
     {
@@ -104,6 +106,8 @@
       "theme": "food",
       "title": "Vaste maaltijden op drukke dagen",
       "summary": "Je patroon oogt in balans. Neem één eenvoudige lunch mee op de twee langste werkdagen, zodat tussendoor knabbelen niet sluipenderwijs toeneemt.",
+      "explanation": "Een kleine drukke-dag kcal-nudge is bij jou de enige verhogende knop. Geen dieet: lunch meenemen op de twee langste dagen.",
+      "how": "Maandagavond: twee lunches klaarzetten. Dinsdag en donderdag geen snackrun tussen de mails door.",
       "linked_factors": ["kcal", "bmi"]
     },
     {
@@ -111,6 +115,8 @@
       "theme": "sleep",
       "title": "Bescherm de slaap die al goed gaat",
       "summary": "Houd je avondritueel. Wordt het een late week, pak de volgende nacht dezelfde bedtijd — geen weekend-uitslaapmarathon.",
+      "explanation": "Slaap werkt bij jou al beschermend. Bewaar het ritueel; herstel de volgende nacht in plaats van het weekend om te gooien.",
+      "how": "Zelfde bedtijd vijf nachten. Late donderdag? Vrijdag dezelfde tijd, geen uitslapen tot elf.",
       "linked_factors": ["sleep"]
     }
   ],

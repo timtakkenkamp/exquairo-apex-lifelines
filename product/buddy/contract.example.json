@@ -5,11 +5,11 @@
   "disclaimer": "Demo only. Not a diagnosis, prognosis, or medical advice. Lifestyle coaching — talk to your care provider about medical questions.",
   "patient": {
     "persona_id": "persona-river",
-    "display_name": "River",
+    "display_name": "Pietje",
     "age": 54,
-    "pronouns": "they/them",
-    "tagline": "Ready for small, steady changes.",
-    "story": "Mid-50s, higher weight, little reported sport, mother with type 2 diabetes, sleep has been patchy.",
+    "pronouns": "hij/hem",
+    "tagline": "Klaar voor kleine, vaste stappen.",
+    "story": "Begin 50, hoger gewicht, weinig gerapporteerde sport, moeder met type 2 diabetes, slaap is rommelig.",
     "height_cm": 174,
     "weight_kg": 94.5,
     "bmi": 31.2,
@@ -52,7 +52,7 @@
       "importance": 0.34,
       "patient_value": "31.2",
       "unit": "kg/m²",
-      "note": "Local mock contribution for River — not a trained attribution."
+      "note": "Local mock contribution for Pietje — not a trained attribution."
     },
     {
       "id": "sports",
@@ -79,7 +79,7 @@
       "importance": 0.14,
       "patient_value": "moeder",
       "unit": null,
-      "note": "Background context; not something River can change."
+      "note": "Background context; not something Pietje can change."
     },
     {
       "id": "sleep",
@@ -97,6 +97,8 @@
       "theme": "sport",
       "title": "Bouw een wandelritme op",
       "summary": "Deze week na twee maaltijden tien minuten wandelen. Dezelfde schoenen, dezelfde straat — makkelijk vol te houden.",
+      "explanation": "Bij jou wegen BMI en weinig beweging het zwaarst, met taille als derde knop. Een vast Groninger rondje is de meest directe leefstijlstap: zelfde start, zelfde schoenen, geen sportschema.",
+      "how": "Drie keer deze week: jas aan na het eten, Noorderplantsoen in, 25–45 minuten. Regendag? Alleen het parkrondje telt ook.",
       "linked_factors": ["sports", "bmi", "waist"]
     },
     {
@@ -104,6 +106,8 @@
       "theme": "food",
       "title": "Rustige maaltijden, minder suikerdrank",
       "summary": "Houd je eettijden rustig en wissel één suikerdrankje per dag in voor water of ongezoete thee. Klein, niet streng.",
+      "explanation": "BMI en taille hangen in deze demo samen met wat je drinkt en hoe gehaast je eet. Geen dieet: één vaste wissel, dezelfde koffieafspraak.",
+      "how": "Kies één moment (middag of na het eten). Zet water of thee al klaar. Zeven dagen hetzelfde moment, dan pas iets nieuws.",
       "linked_factors": ["bmi", "waist"]
     },
     {
@@ -111,10 +115,12 @@
       "theme": "sleep",
       "title": "Een rustiger avondritueel",
       "summary": "Kies een bedtijd en leg de telefoon 30 minuten eerder in een andere kamer. Slaap is een leefstijlknop, geen recept.",
+      "explanation": "Onregelmatige slaap staat bij jou als extra leefstijlknop naast gewicht en bewegen. Een vaste bedtijd maakt de dag kleiner, niet perfecter.",
+      "how": "Vijf avonden: telefoon de kamer uit, licht lager, één rustig ding (thee of een boek). Geen slaapbehandeling.",
       "linked_factors": ["sleep"]
     }
   ],
   "coaching": {
-    "template": "River, in deze demo is het lange-termijn risico het cijfer om in de gaten te houden — informatie, geen vonnis. Gewicht, bewegen en slaap komen bij jou het sterkst naar voren. Begin met wandelingen die je volhoudt, geen perfect plan."
+    "template": "Pietje, in deze demo is het lange-termijn risico het cijfer om in de gaten te houden — informatie, geen vonnis. Gewicht, bewegen en slaap komen bij jou het sterkst naar voren. Begin met wandelingen die je volhoudt, geen perfect plan."
   }
 }
