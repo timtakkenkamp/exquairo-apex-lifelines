@@ -1,0 +1,70 @@
+{
+  "schema_version": "0.1.0",
+  "source": "mock",
+  "generated_at": "2026-09-17T00:00:00Z",
+  "disclaimer": "Demo payload only. Not a diagnosis, prognosis, or medical advice.",
+  "patient": {
+    "persona_id": "persona-river",
+    "display_name": "River (demo)"
+  },
+  "target": {
+    "id": "unfavorable_hba1c",
+    "label": "Unfavorable HbA1c",
+    "threshold": ">=6.5%",
+    "horizon": "illustrative"
+  },
+  "risk_score": 0.62,
+  "risk_label": "moderate",
+  "top_factors": [
+    {
+      "id": "bmi",
+      "label": "Body mass index",
+      "direction": "increases_risk",
+      "importance": 0.31,
+      "patient_value": "31.2",
+      "unit": "kg/m2",
+      "note": "Local/placeholder importance — not a trained attribution."
+    },
+    {
+      "id": "sports",
+      "label": "Weekly sports / activity",
+      "direction": "increases_risk",
+      "importance": 0.22,
+      "patient_value": "none reported",
+      "unit": null,
+      "note": "Low activity treated as a risk-raising factor in this mock."
+    },
+    {
+      "id": "family_t2dm",
+      "label": "Family history of type 2 diabetes",
+      "direction": "increases_risk",
+      "importance": 0.18,
+      "patient_value": "mother",
+      "unit": null,
+      "note": "Placeholder; family flags are sparse in the synth table."
+    }
+  ],
+  "interventions": [
+    {
+      "id": "activity-walks",
+      "title": "Build a weekly walking habit",
+      "summary": "Start with short, regular walks on most days. The buddy will later tailor minutes to the activity factor.",
+      "linked_factors": ["sports", "bmi"],
+      "status": "placeholder"
+    },
+    {
+      "id": "food-pattern",
+      "title": "Steady meal pattern, fewer sugary drinks",
+      "summary": "Keep meals regular and swap sugary drinks for water or unsweetened alternatives. Copy is demo-only.",
+      "linked_factors": ["bmi"],
+      "status": "placeholder"
+    },
+    {
+      "id": "family-check-in",
+      "title": "Plan a check-in with your care team",
+      "summary": "Family history is not something you change; use it as a reason to review screening and lifestyle together.",
+      "linked_factors": ["family_t2dm"],
+      "status": "placeholder"
+    }
+  ]
+}
