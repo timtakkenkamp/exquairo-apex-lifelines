@@ -15,6 +15,8 @@ from buddy_lib import (
     is_medical_or_triage,
     load_payload,
     load_personas,
+    pick_primary_intervention,
+    top_local_factors,
     validate_payload,
 )
 
@@ -97,6 +99,15 @@ class InterventionPageTests(unittest.TestCase):
         self.assertTrue(any("hb" in page["why"].lower() or "risico" in page["why"].lower() for _ in [0]))
         food = get_intervention_page("food")
         self.assertIn("stub", food["kicker"].lower())
+
+
+class SimplifyTests(unittest.TestCase):
+    def test_three_factors_and_movement_primary_for_river(self):
+        river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")
+        self.assertEqual(len(top_local_factors(river, 3)), 3)
+        primary = pick_primary_intervention(river)
+        self.assertIsNotNone(primary)
+        self.assertEqual(primary["theme"], "sport")
 
 
 class CopyTests(unittest.TestCase):

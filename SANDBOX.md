@@ -25,10 +25,10 @@ Near-term focus is presentation + product: an **electronic buddy** for patients.
 
 Intended patient experience (mock first, now runnable):
 
-1. Two pictures: **korte-termijn** and **lange-termijn risico op diabetes** (mock proxy: HbA1c > 6.5%).
-2. Top **patient-specific** risk factors (local importance, not a global list).
-3. Linked lifestyle intervention cards with theme colours.
-4. Weight / BMI what-if that moves the mock percentages and BMI/waist bars.
+1. Two big numbers: korte- / lange-termijn risico op diabetes (HbA1c > 6.5% as small disclaimer).
+2. **Waarom jij** — max 3 local factors.
+3. **Doe dit** — one primary CTA (often Groningen walk).
+4. Weight / BMI what-if; Boris visual style.
 
 Run the demo: `uv run streamlit run product/buddy/app.py`
 

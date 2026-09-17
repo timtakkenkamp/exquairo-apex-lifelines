@@ -36,6 +36,18 @@ RISK_BAND_NL = {
     "high": "hoog",
 }
 
+ACTIONABLE_THEME = {
+    "sports": "sport",
+    "cycle_commute": "sport",
+    "bmi": "sport",
+    "waist": "sport",
+    "weight": "sport",
+    "kcal": "food",
+    "sleep": "sleep",
+    "smoking": "smoking",
+    "alcohol": "alcohol",
+}
+
 FACTOR_LABEL_NL = {
     "bmi": "BMI",
     "weight": "Gewicht",
@@ -161,6 +173,28 @@ def factor_direction_nl(direction: str) -> str:
 
 def risk_band_nl(label: str) -> str:
     return RISK_BAND_NL.get(label, label)
+
+
+def top_local_factors(payload: dict[str, Any], limit: int = 3) -> list[dict[str, Any]]:
+    """Patient-facing 'Waarom jij': at most `limit` local factors."""
+    return factor_share(payload.get("top_factors") or [])[:limit]
+
+
+def pick_primary_intervention(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Strongest *actionable* factor → matching lifestyle card (Movement often wins)."""
+    interventions = payload.get("interventions") or []
+    by_theme = {item.get("theme"): item for item in interventions}
+    for factor in top_local_factors(payload, limit=5):
+        theme = ACTIONABLE_THEME.get(factor.get("id"))
+        if theme and theme in by_theme:
+            return by_theme[theme]
+    return by_theme.get("sport") or (interventions[0] if interventions else None)
+
+
+def secondary_interventions(payload: dict[str, Any], primary: dict[str, Any] | None, limit: int = 2) -> list[dict[str, Any]]:
+    primary_id = (primary or {}).get("id")
+    extras = [item for item in payload.get("interventions") or [] if item.get("id") != primary_id]
+    return extras[:limit]
 
 
 def factor_share(factors: list[dict[str, Any]]) -> list[dict[str, Any]]:

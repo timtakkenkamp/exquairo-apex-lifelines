@@ -1,14 +1,24 @@
-/* Page chrome only. Card colours are inline so Streamlit cannot strip them. */
+/* Boris: soft sky, rounded cards, sprout accent */
 .stApp {
-  background: linear-gradient(180deg, #f7f3ea 0%, #eef3ef 100%);
+  background: linear-gradient(180deg, #eaf4fb 0%, #f4faf6 72%, #ffffff 100%);
 }
 
 .block-container {
-  padding-top: 1.2rem;
-  padding-bottom: 3rem;
-  max-width: 1180px;
+  padding-top: 1rem;
+  padding-bottom: 2.4rem;
+  max-width: 980px;
 }
 
 div[data-testid="stChatInput"] {
   display: none;
+}
+
+.stButton > button {
+  border-radius: 999px;
+  font-weight: 650;
+  border: none;
+}
+
+header[data-testid="stHeader"] {
+  background: transparent;
 }
