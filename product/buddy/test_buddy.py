@@ -257,7 +257,10 @@ class SimplifyTests(unittest.TestCase):
         self.assertTrue((EXAMPLE_CONTRACT.parent / "assets" / "boris-mascot.png").is_file())
         self.assertIn('class="buddy-tile"', app)
         self.assertIn("buddy-tile-blurb", app)
+        self.assertIn("buddy-tile-factor", app)
+        self.assertIn("render_factor_action_tile", app)
         self.assertIn("buddy-tiles-flag", app)
+        self.assertIn("st.columns(3)", app)
         self.assertIn('vertical_alignment="bottom"', app)
         self.assertIn("Past bij jou", app)
         self.assertIn("audience_persona_pills", app)
@@ -295,7 +298,7 @@ class SimplifyTests(unittest.TestCase):
         self.assertIn("Je risico over 5 jaar", app)
         self.assertNotIn("Kleine stappen. Grote impact.", app)
         self.assertIn("buddy-audience-flag", app)
-        self.assertIn('stElementContainer"]:has(.buddy-tile)', css)
+        self.assertIn(".buddy-tile-factor", css)
 
 
 class CopyTests(unittest.TestCase):
@@ -556,6 +559,15 @@ class SystemPromptTests(unittest.TestCase):
         self.assertNotIn("Bloeddrukmedicatie", blob_after)
         self.assertNotIn("Heupomtrek", blob_after)
         self.assertNotIn("Nu 94.5 kg", blob_after)
+        self.assertIn("buddy-tile-factor", blob_after)
+        self.assertIn("verhoogt je risico", blob_after)
+        self.assertNotIn('class="buddy-factor"', blob_after)
+        tile_ctas = [
+            b.label
+            for b in demo.button
+            if b.label not in {"Reset", "Vraag"}
+        ]
+        self.assertEqual(len(tile_ctas), 3)
         self.assertFalse(any("Lange" in (s.value or "") for s in demo.subheader))
 
     def test_zaal_chat_replies_for_every_persona(self):

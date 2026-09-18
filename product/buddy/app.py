@@ -16,6 +16,7 @@ from buddy_lib import (
     apply_lifestyle_overlay,
     apply_weight_whatif,
     clip,
+    factor_direction_nl,
     factor_display_label,
     load_default_system_prompt,
     load_personas,
@@ -174,30 +175,22 @@ def format_factor_value(factor: dict) -> str:
     return f"{pretty} {unit}".strip()
 
 
-def render_factor(factor: dict) -> None:
-    shown = format_factor_value(factor)
-    value_html = (
-        f'<div style="color:#5A7A90;font-size:0.88rem;">{shown}</div>' if shown else ""
-    )
-    st.markdown(
-        f"""
-<div class="buddy-factor" style="background:#fff;border:1px solid #d5e6f2;border-radius:18px;padding:14px 16px;margin-bottom:8px;">
-  <div style="font-weight:700;color:#1A4A6E;">{factor_display_label(factor)}</div>
-  {value_html}
-</div>
-""",
-        unsafe_allow_html=True,
-    )
-
-
-def render_intervention_tile(item: dict, payload: dict) -> None:
+def render_factor_action_tile(factor: dict, item: dict) -> None:
+    """One column card: this person's factor + the matching action + CTA."""
     theme = item.get("theme") or "sport"
     meta = THEME_META.get(theme, {"label": "Stap"})
     colors = THEME_COLORS.get(theme, THEME_COLORS["sport"])
     blurb = item.get("summary") or item.get("explanation") or ""
+    shown = format_factor_value(factor)
+    why = factor_direction_nl(str(factor.get("direction") or ""))
+    why_line = f"{shown} · {why}" if shown else why
     st.markdown(
         f"""
 <div class="buddy-tile" style="--buddy-tile-bar:{colors["bar"]};--buddy-tile-ink:{colors["ink"]};">
+  <div class="buddy-tile-factor">
+    <div class="buddy-tile-factor-label">{factor_display_label(factor)}</div>
+    <div class="buddy-tile-factor-why">{why_line}</div>
+  </div>
   <div class="buddy-tile-kicker">{meta["label"]}</div>
   <div class="buddy-tile-title">{item["title"]}</div>
   <div class="buddy-tile-blurb">{blurb}</div>
@@ -507,9 +500,11 @@ with st.container(border=True):
 payload = payload_from_whatif(baseline, use_live)
 patient = payload["patient"]
 st.markdown('<div class="buddy-voorjou-section buddy-tiles-flag">', unsafe_allow_html=True)
-for factor, item in factor_action_pairs(payload, limit=3):
-    render_factor(factor)
-    render_intervention_tile(item, payload)
+pairs = factor_action_pairs(payload, limit=3)
+row = st.columns(3)
+for col, (factor, item) in zip(row, pairs):
+    with col:
+        render_factor_action_tile(factor, item)
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown('<div class="buddy-chat-section">', unsafe_allow_html=True)
