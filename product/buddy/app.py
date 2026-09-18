@@ -23,6 +23,7 @@ from buddy_lib import (
     pct,
     persona_body,
     advice_sets,
+    factors_for_advice_card,
     patient_can_influence,
     resolve_openai_api_key,
     risk_band_nl,
@@ -225,7 +226,7 @@ def render_advice_tile(factors: list[dict], item: dict, theme: str) -> None:
     colors = THEME_COLORS.get(theme, THEME_COLORS["sport"])
     blurb = item.get("summary") or item.get("explanation") or ""
     chips = []
-    for factor in factors:
+    for factor in factors_for_advice_card(item, factors):
         label = factor_display_label(factor)
         shown = format_factor_value(factor)
         chip = f"{label} {shown}".strip() if shown else label
@@ -233,11 +234,11 @@ def render_advice_tile(factors: list[dict], item: dict, theme: str) -> None:
     chips_html = f'<div class="buddy-chips buddy-tile-chips">{"".join(chips)}</div>' if chips else ""
     st.markdown(
         f"""
-<div class="buddy-tile" style="--buddy-tile-bar:{colors["bar"]};--buddy-tile-ink:{colors["ink"]};background:#fff;border:1px solid #d5e6f2;border-top:8px solid {colors["bar"]};border-radius:20px 20px 0 0;padding:16px 16px 14px;">
+<div class="buddy-tile" style="--buddy-tile-bar:{colors["bar"]};--buddy-tile-ink:{colors["ink"]};background:#fff;border:1px solid #d5e6f2;border-top:8px solid {colors["bar"]};border-radius:20px 20px 0 0;padding:18px 16px 22px;">
   <div class="buddy-tile-kicker" style="font-size:0.75rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:{colors["ink"]};">{meta["label"]}</div>
   <div class="buddy-tile-title" style="font-size:1.15rem;font-weight:750;color:#1A4A6E;margin:8px 0 10px;">{item["title"]}</div>
   {chips_html}
-  <div class="buddy-tile-blurb" style="color:#3d5a70;font-size:0.94rem;line-height:1.45;">{blurb}</div>
+  <div class="buddy-tile-blurb" style="color:#3d5a70;font-size:0.94rem;line-height:1.45;padding-bottom:0.85rem;">{blurb}</div>
 </div>
 """,
         unsafe_allow_html=True,

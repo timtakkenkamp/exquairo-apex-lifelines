@@ -20,6 +20,7 @@ from buddy_lib import (
     apply_weight_whatif,
     build_session_context,
     factor_direction_nl,
+    factor_display_label,
     is_medical_or_triage,
     load_default_system_prompt,
     load_payload,
@@ -30,6 +31,7 @@ from buddy_lib import (
     advice_sets,
     advice_why,
     factor_action_pairs,
+    factors_for_advice_card,
     patient_can_influence,
     pick_primary_intervention,
     render_system_prompt,
@@ -88,6 +90,86 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual(sets[1][2], "sleep")
         self.assertNotEqual(advice_why("sport", sets[0][0]), advice_why("sleep", sets[1][0]))
         self.assertNotIn("verhoogt je risico op diabetes", advice_why("sport", sets[0][0]))
+
+    def test_pietje_walk_tile_is_not_sams_copy(self):
+        by_id = {p["patient"]["persona_id"]: p for p in load_personas()}
+        river, sam, noor = by_id["persona-river"], by_id["persona-sam"], by_id["persona-noor"]
+
+        river_sport = next((group, card) for group, card, theme in advice_sets(river, 3) if theme == "sport")
+        river_group, river_card = river_sport
+        self.assertEqual(river_card["id"], "activity-walks")
+        self.assertEqual(river_card["title"], "Rondje plantsoen, grachten en Martinitoren")
+        self.assertIn("plantsoen", river_card["summary"].lower())
+        self.assertIn("grachten", river_card["summary"].lower())
+        self.assertIn("martinitoren", river_card["summary"].lower())
+        river_ids = {factor["id"] for factor in river_group}
+        self.assertTrue({"bmi", "waist"} <= river_ids)
+        self.assertNotIn("sports", river_ids)
+        self.assertNotIn("cycle_commute", river_ids)
+        river_blob = " ".join(
+            f"{factor_display_label(factor)} {factor.get('patient_value') or ''}"
+            for factor in river_group
+        ).lower()
+        self.assertNotIn("woon-werk", river_blob)
+        self.assertNotIn("sport / beweging", river_blob)
+        leaked = {
+            **river,
+            "top_factors": [
+                {
+                    "id": "sports",
+                    "label": "Sport / beweging",
+                    "direction": "increases_risk",
+                    "importance": 0.4,
+                    "patient_value": "beweging via woon-werk",
+                },
+                *river["top_factors"],
+            ],
+        }
+        leaked_group, leaked_card, leaked_theme = next(
+            row for row in advice_sets(leaked, 3) if row[2] == "sport"
+        )
+        self.assertEqual(leaked_theme, "sport")
+        self.assertEqual(leaked_card["id"], "activity-walks")
+        leaked_blob = " ".join(
+            f"{factor.get('id')} {factor_display_label(factor)} {factor.get('patient_value') or ''}"
+            for factor in leaked_group
+        ).lower()
+        self.assertNotIn("woon-werk", leaked_blob)
+        self.assertNotIn("cycle_commute", leaked_blob)
+        self.assertFalse(any(factor.get("id") == "sports" for factor in leaked_group))
+
+        sam_group, sam_card, sam_theme = next(
+            row for row in advice_sets(sam, 3) if row[2] == "sport"
+        )
+        self.assertEqual(sam_theme, "sport")
+        self.assertEqual(sam_card["id"], "keep-cycling")
+        self.assertIn("fiets", sam_card["title"].lower())
+        sam_ids = {factor["id"] for factor in sam_group}
+        self.assertIn("cycle_commute", sam_ids)
+        self.assertNotIn("sports", sam_ids)
+        sam_blob = " ".join(
+            f"{factor_display_label(factor)} {factor.get('patient_value') or ''}"
+            for factor in sam_group
+        ).lower()
+        self.assertIn("woon-werk", sam_blob)
+        self.assertNotIn("sport / beweging", sam_blob)
+        self.assertTrue(any("fiets" in factor_display_label(factor).lower() for factor in sam_group))
+
+        noor_group, noor_card, noor_theme = next(
+            row for row in advice_sets(noor, 3) if row[2] == "sport"
+        )
+        self.assertEqual(noor_theme, "sport")
+        self.assertEqual(noor_card["id"], "keep-training")
+        self.assertIn("training", noor_card["title"].lower())
+        self.assertNotIn("sports", {factor["id"] for factor in noor_group})
+        noor_blob = " ".join(
+            f"{factor_display_label(factor)} {factor.get('patient_value') or ''}"
+            for factor in noor_group
+        ).lower()
+        self.assertNotIn("sport / beweging", noor_blob)
+        self.assertNotIn("woon-werk", noor_blob)
+        rewritten = factors_for_advice_card(noor_card, noor["top_factors"])
+        self.assertFalse(any(factor.get("id") == "sports" for factor in rewritten))
 
     def test_bri_roundtrip_from_waist(self):
         from model_adapter import body_roundness_index, waist_cm_from_bri
@@ -334,6 +416,7 @@ class SimplifyTests(unittest.TestCase):
         self.assertIn(".buddy-step-card--wide", css)
         self.assertIn("align-items: stretch", css)
         self.assertIn("buddy-tile-blurb", css)
+        self.assertIn("padding-bottom: 0.85rem", css)
         self.assertIn(".buddy-hero", css)
         self.assertIn("Shared lever chrome so BRI matches", css)
         self.assertIn("Je elektronische gezondheidsbuddy", app)
@@ -369,10 +452,16 @@ class GuardrailTests(unittest.TestCase):
         self.assertEqual(text, DEFLECT_MESSAGE)
         text, source = answer_question("How can I walk more?", river)
         self.assertEqual(source, "template")
-        self.assertIn("wandel", text.lower())
+        self.assertTrue(
+            any(word in text.lower() for word in ("wandel", "plantsoen", "rondje", "martinitoren")),
+            msg=text,
+        )
         text, source = answer_question("Hoe kan ik meer wandelen?", river)
         self.assertEqual(source, "template")
-        self.assertIn("wandel", text.lower())
+        self.assertTrue(
+            any(word in text.lower() for word in ("wandel", "plantsoen", "rondje", "martinitoren")),
+            msg=text,
+        )
         self.assertTrue(is_medical_or_triage("Moet ik metformine nemen?"))
         text, source = answer_question("Moet ik metformine nemen?", river)
         self.assertEqual(source, "guardrail")
@@ -398,7 +487,10 @@ class GuardrailTests(unittest.TestCase):
         text, source = answer_question(question, river)
         self.assertNotIn(source, {"guardrail", "guardrail-post"})
         self.assertNotEqual(text, DEFLECT_MESSAGE)
-        self.assertIn("wandel", text.lower())
+        self.assertTrue(
+            any(word in text.lower() for word in ("wandel", "plantsoen", "rondje", "martinitoren")),
+            msg=text,
+        )
         text, source = answer_question("welke dosering metformine", river)
         self.assertEqual(source, "guardrail")
         self.assertEqual(text, DEFLECT_MESSAGE)
@@ -461,12 +553,23 @@ class GuardrailTests(unittest.TestCase):
             sets = advice_sets(live, 3)
             self.assertTrue(sets, msg=payload["patient"]["display_name"])
             self.assertEqual(len({card["id"] for _group, card, _theme in sets}), len(sets))
-            for group, _card, _theme in sets:
+            for group, card, theme in sets:
                 self.assertTrue(group)
                 for factor in group:
                     self.assertTrue(patient_can_influence(factor), msg=factor.get("id"))
                     blob = f"{factor.get('id')} {factor.get('label')} {factor.get('patient_value')}"
                     self.assertNotRegex(blob, r"(?i)hba1c|hbac|kreatinine|creatinine|bloeddrukmedic|heupomtrek")
+                    self.assertNotIn("Sport / beweging", blob)
+                if theme == "sport" and payload["patient"]["persona_id"] == "persona-river":
+                    self.assertEqual(card["id"], "activity-walks")
+                    self.assertEqual(card["title"], "Rondje plantsoen, grachten en Martinitoren")
+                    live_blob = " ".join(blob.lower() for blob in (
+                        f"{factor.get('id')} {factor.get('label')} {factor.get('patient_value')}"
+                        for factor in group
+                    ))
+                    self.assertNotIn("woon-werk", live_blob)
+                    self.assertNotIn("cycle_commute", live_blob)
+                    self.assertNotIn("sports", {factor.get("id") for factor in group})
 
 
 class OpenAIHookTests(unittest.TestCase):
@@ -562,7 +665,8 @@ class SystemPromptTests(unittest.TestCase):
         rendered = render_system_prompt(river)
         self.assertIn("Pietje", rendered)
         self.assertNotIn(SESSIE_CONTEXT_TOKEN, rendered)
-        self.assertIn("Bouw een wandelritme op", rendered)
+        self.assertIn("Rondje plantsoen, grachten en Martinitoren", rendered)
+        self.assertNotIn("Bouw een wandelritme op", rendered)
 
     def test_custom_template_without_token_still_appends_context(self):
         river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")
@@ -653,6 +757,12 @@ class SystemPromptTests(unittest.TestCase):
         self.assertNotIn("Nu 94.5 kg", blob_after)
         self.assertIn("buddy-tile-chips", blob_after)
         self.assertIn("buddy-chip", blob_after)
+        self.assertIn("Rondje plantsoen, grachten en Martinitoren", blob_after)
+        self.assertIn("plantsoen", blob_after.lower())
+        self.assertIn("martinitoren", blob_after.lower())
+        self.assertNotIn("Bouw een wandelritme op", blob_after)
+        self.assertNotIn("woon-werk", blob_after.lower())
+        self.assertNotIn("Sport / beweging", blob_after)
         self.assertIn("rustiger avond", blob_after)
         self.assertNotIn("leefstijlknop", blob_after.lower())
         self.assertNotIn("risico-beeld", blob_after.lower())
@@ -813,6 +923,17 @@ class SystemPromptTests(unittest.TestCase):
             blob = " ".join(str(m.value) for m in demo.markdown)
             self.assertRegex(blob, r"\d+\s*%", msg=f"{name} missing risk number")
             self.assertIn("Risico op diabetes", blob)
+            self.assertNotIn("Sport / beweging", blob, msg=f"{name} stacked sport/beweging")
+            if pid == "persona-river":
+                self.assertIn("Rondje plantsoen, grachten en Martinitoren", blob)
+                self.assertNotIn("woon-werk", blob.lower())
+                self.assertNotIn("Bouw een wandelritme op", blob)
+            elif pid == "persona-sam":
+                self.assertIn("Bescherm je fietsrit", blob)
+                self.assertIn("woon-werk", blob.lower())
+            elif pid == "persona-noor":
+                self.assertIn("Houd de training die je al fijn vindt", blob)
+                self.assertNotIn("woon-werk", blob.lower())
             self.assertNotIn("Alcohol (glazen per week)", blob)
             self.assertFalse(any("alcohol" in (s.label or "").lower() for s in demo.slider))
             self.assertNotIn("Creatinine", blob)

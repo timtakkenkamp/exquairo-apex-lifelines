@@ -335,8 +335,11 @@ def intervention_for_factor(
 
 
 MOVEMENT_GROUP_IDS = frozenset({"bmi", "bri", "waist", "weight", "sports", "cycle_commute"})
+BODY_MOVEMENT_IDS = frozenset({"bmi", "bri", "waist", "weight"})
 FOOD_GROUP_IDS = frozenset({"kcal", "alcohol"})
 SLEEP_GROUP_IDS = frozenset({"sleep"})
+# Theme kicker is already "Beweging" — never also chip "Sport / beweging".
+_STACKED_MOVEMENT_RE = re.compile(r"sport\s*/\s*beweging", re.IGNORECASE)
 
 ADVICE_GROUPS: tuple[tuple[str, frozenset[str], tuple[str, ...]], ...] = (
     ("sport", MOVEMENT_GROUP_IDS, ("activity-walks",)),
@@ -358,6 +361,79 @@ def visible_influenceable_factors(payload: dict[str, Any]) -> list[dict[str, Any
         seen.add(fid)
         combined.append(factor)
     return factor_share(combined)
+
+
+def _is_stacked_movement_chip(factor: dict[str, Any]) -> bool:
+    """True when a chip would repeat the Beweging theme as 'sport / beweging'."""
+    fid = str(factor.get("id") or "")
+    if fid == "sports":
+        return True
+    blob = f"{factor.get('label') or ''} {factor_display_label(factor)}"
+    return bool(_STACKED_MOVEMENT_RE.search(blob))
+
+
+def _looks_like_commute_copy(factor: dict[str, Any]) -> bool:
+    fid = str(factor.get("id") or "")
+    if fid == "cycle_commute":
+        return True
+    blob = f"{factor.get('label') or ''} {factor.get('patient_value') or ''}".lower()
+    return "woon-werk" in blob or "cycle" in fid
+
+
+def _commute_chip_for_cycling(factors: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Sam keeps woon-werk on one fiets chip, never as stacked Sport/Beweging."""
+    commute = next(
+        (
+            factor
+            for factor in factors
+            if _looks_like_commute_copy(factor) and not _is_stacked_movement_chip(factor)
+        ),
+        None,
+    )
+    sports_commute = next(
+        (
+            factor
+            for factor in factors
+            if "woon-werk" in str(factor.get("patient_value") or "").lower()
+        ),
+        None,
+    )
+    if commute is None and sports_commute is None:
+        return None
+    chip = dict(commute or sports_commute)
+    chip["id"] = "cycle_commute"
+    chip["label"] = FACTOR_LABEL_NL["cycle_commute"]
+    if sports_commute is not None and "woon-werk" not in str(chip.get("patient_value") or "").lower():
+        chip["patient_value"] = sports_commute.get("patient_value")
+        chip["unit"] = sports_commute.get("unit")
+    return chip
+
+
+def factors_for_advice_card(
+    card: dict[str, Any],
+    factors: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Chips on one tile: walk = body only; never stack Sport/Beweging.
+
+    Pietje (activity-walks): BMI / BRI / taille / gewicht. No commute copy.
+    Sam (keep-cycling): woon-werk / fietsen naar werk, plus body chips.
+    Noor (keep-training): body chips; her title carries the training line.
+    """
+    card_id = str(card.get("id") or "")
+    out: list[dict[str, Any]] = []
+    if card_id == "keep-cycling":
+        commute = _commute_chip_for_cycling(factors)
+        if commute is not None:
+            out.append(commute)
+    for factor in factors:
+        fid = str(factor.get("id") or "")
+        if _is_stacked_movement_chip(factor) or _looks_like_commute_copy(factor):
+            continue
+        if card_id in {"activity-walks", "keep-cycling", "keep-training"}:
+            if fid not in BODY_MOVEMENT_IDS:
+                continue
+        out.append(factor)
+    return out
 
 
 def _intervention_for_theme(
@@ -411,7 +487,7 @@ def advice_sets(
         card = _intervention_for_theme(payload, theme, preferred)
         if not card:
             continue
-        sets.append((group, card, theme))
+        sets.append((factors_for_advice_card(card, group), card, theme))
         if len(sets) >= limit:
             break
     return sets
@@ -421,7 +497,7 @@ def factor_action_pairs(
     payload: dict[str, Any], limit: int = 3
 ) -> list[tuple[dict[str, Any], dict[str, Any]]]:
     """Compatibility: first factor of each advice set + its action card."""
-    return [(group[0], card) for group, card, _theme in advice_sets(payload, limit)]
+    return [(group[0], card) for group, card, _theme in advice_sets(payload, limit) if group]
 
 
 def pick_primary_intervention(payload: dict[str, Any]) -> dict[str, Any] | None:

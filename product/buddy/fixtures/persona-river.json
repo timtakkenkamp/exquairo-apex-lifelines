@@ -99,9 +99,9 @@
     {
       "id": "activity-walks",
       "theme": "sport",
-      "title": "Bouw een wandelritme op",
-      "summary": "Deze week na twee maaltijden tien minuten wandelen. Dezelfde schoenen, dezelfde straat — makkelijk vol te houden.",
-      "explanation": "Bij jou wegen BMI en weinig beweging het zwaarst, samen met je taille. Een vast Groninger rondje is de meest directe stap: zelfde start, zelfde schoenen, geen sportschema.",
+      "title": "Rondje plantsoen, grachten en Martinitoren",
+      "summary": "Deze week het vaste Groninger rondje langs plantsoen, grachten en Martinitoren — dezelfde schoenen, hetzelfde startpunt.",
+      "explanation": "Bij jou wegen BMI en taille het zwaarst. Het vaste Groninger rondje — plantsoen, grachten, Martinitoren — is de stap, geen sportschema en geen woon-werkrit.",
       "how": "Drie keer deze week: jas aan na het eten, Noorderplantsoen in, 25–45 minuten. Regendag? Alleen het parkrondje telt ook.",
       "linked_factors": ["sports", "bmi", "waist"]
     },
