@@ -274,17 +274,11 @@ def render_detail_page(
     theme: str,
     patient_name: str,
     payload: dict,
-    personas_by_id: dict | None = None,
 ) -> None:
     page = get_intervention_page(theme)
     colors = THEME_COLORS.get(theme, THEME_COLORS["sport"])
     meta = THEME_META.get(theme, {"label": "Stap"})
-    if AUDIENCE:
-        render_header(audience=True)
-        if personas_by_id:
-            render_audience_pills(personas_by_id)
-    else:
-        render_header(audience=False)
+    render_header(audience=AUDIENCE)
 
     st.markdown(
         f'<div class="buddy-detail-flag buddy-detail--{theme}" style="--buddy-tile-bar:{colors["bar"]};--buddy-tile-ink:{colors["ink"]};"></div>',
@@ -511,7 +505,6 @@ if st.session_state.get("buddy_view") == "detail":
         st.session_state.get("detail_theme") or "sport",
         patient["display_name"],
         payload,
-        personas_by_id=by_id,
     )
     st.stop()
 

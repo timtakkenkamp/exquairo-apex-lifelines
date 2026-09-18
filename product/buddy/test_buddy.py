@@ -619,11 +619,13 @@ class SystemPromptTests(unittest.TestCase):
         self.assertIn("De route", detail)
         self.assertIn("Je elektronische gezondheidsbuddy", detail)
         self.assertIn("BMI", detail)
+        self.assertFalse(demo.pills)
         self.assertNotIn("Past bij jou", detail)
         self.assertNotIn("Waarom dit helpt", detail)
         next(b for b in demo.button if b.label == "Terug naar de tegels").click().run()
         self.assertFalse(demo.exception)
         self.assertTrue(any(s.label == "Gewicht (kg)" for s in demo.slider))
+        self.assertTrue(len(demo.pills) >= 1)
 
     def test_zaal_chat_replies_for_every_persona(self):
         from streamlit.testing.v1 import AppTest
