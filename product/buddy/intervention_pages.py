@@ -9,7 +9,7 @@ from typing import Any
 MOVEMENT_GRONINGEN: dict[str, Any] = {
     "theme": "sport",
     "kicker": "Beweging · Groningen",
-    "title": "Een rondje: Noorderplantsoen, grachten, Martinitoren",
+    "title": "Rondje plantsoen, grachten en Martinitoren",
     "coach": (
         "Geen schema voor atleten — een rondje dat je kunt onthouden. "
         "Groen, water, en de toren als herkenningspunt. Trek je jas aan en begin klein."

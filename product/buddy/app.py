@@ -195,8 +195,32 @@ def format_factor_value(factor: dict) -> str:
     return f"{pretty} {unit}".strip()
 
 
+TILE_CTA = {
+    "activity-walks": "Open de Groninger wandeling",
+    "keep-cycling": "Bescherm je fietsrit",
+    "keep-training": "Houd je training vast",
+    "food-pattern": "Wissel één suikerdrank",
+    "food-maintain": "Neem lunch mee op drukke dagen",
+    "sleep-wind-down": "Zet de telefoon uit de kamer",
+    "sleep-keep": "Houd je bedtijd vast",
+    "smoke-free-days": "Kies twee rookvrije dagen",
+    "alcohol-free-evenings": "Kies twee avonden zonder alcohol",
+}
+THEME_CTA = {
+    "sport": "Open de wandeling",
+    "food": "Wissel één suikerdrank",
+    "sleep": "Zet de telefoon uit de kamer",
+    "smoking": "Kies twee rookvrije dagen",
+    "alcohol": "Kies twee avonden zonder alcohol",
+}
+
+
+def _tile_cta(item: dict, theme: str) -> str:
+    return TILE_CTA.get(str(item.get("id") or "")) or THEME_CTA.get(theme, "Open de stap")
+
+
 def render_advice_tile(factors: list[dict], item: dict, theme: str) -> None:
-    """One column card: related factors grouped under one action + CTA."""
+    """One column card: theme, action, chips, one sentence, attached CTA."""
     meta = THEME_META.get(theme, {"label": "Stap"})
     colors = THEME_COLORS.get(theme, THEME_COLORS["sport"])
     blurb = item.get("summary") or item.get("explanation") or ""
@@ -210,19 +234,15 @@ def render_advice_tile(factors: list[dict], item: dict, theme: str) -> None:
     st.markdown(
         f"""
 <div class="buddy-tile" style="--buddy-tile-bar:{colors["bar"]};--buddy-tile-ink:{colors["ink"]};background:#fff;border:1px solid #d5e6f2;border-top:8px solid {colors["bar"]};border-radius:20px 20px 0 0;padding:16px 16px 14px;">
-  {chips_html}
   <div class="buddy-tile-kicker" style="font-size:0.75rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:{colors["ink"]};">{meta["label"]}</div>
   <div class="buddy-tile-title" style="font-size:1.15rem;font-weight:750;color:#1A4A6E;margin:8px 0 10px;">{item["title"]}</div>
+  {chips_html}
   <div class="buddy-tile-blurb" style="color:#3d5a70;font-size:0.94rem;line-height:1.45;">{blurb}</div>
 </div>
 """,
         unsafe_allow_html=True,
     )
-    cta = (
-        "Open de Groninger wandeling"
-        if item.get("id") == "activity-walks"
-        else f"Meer over {meta['label'].lower()}"
-    )
+    cta = _tile_cta(item, theme)
     if st.button(
         cta,
         key=f"open_{item.get('id', theme)}",
@@ -281,8 +301,6 @@ def render_detail_page(
         f'<div class="buddy-detail-flag buddy-detail--{theme}" style="--buddy-tile-bar:{colors["bar"]};--buddy-tile-ink:{colors["ink"]};"></div>',
         unsafe_allow_html=True,
     )
-    if st.button("← Terug naar de tegels", key="back_top"):
-        _go_home()
 
     chips = []
     for factor in _advice_chips(theme, payload):
@@ -308,10 +326,12 @@ def render_detail_page(
         _step_card("Wanneer", "", page["when"], None, colors)
     with long_col:
         _step_card("Hoe lang", "", page["duration"], None, colors)
-    _step_card("De route", page.get("route_name") or "", "", list(page.get("route_steps") or []), colors)
+    steps_kicker = "De wandeling" if theme == "sport" else "Zo doe je het"
+    route_title = page.get("route_name") or "" if theme == "sport" else ""
+    _step_card(steps_kicker, route_title, "", list(page.get("route_steps") or []), colors)
 
     st.markdown('<p class="buddy-detail-foot">Coaching, geen recept.</p>', unsafe_allow_html=True)
-    if st.button("Terug naar de tegels", key="back_bottom", type="primary", use_container_width=True):
+    if st.button("Terug naar de tegels", key="back_home", type="primary", use_container_width=True):
         _go_home()
 
 

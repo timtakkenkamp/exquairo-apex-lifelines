@@ -198,7 +198,7 @@ section.main,
   border-radius: 24px;
   padding: 20px 22px 18px;
   box-shadow: 0 10px 28px rgba(26, 74, 110, 0.06);
-  margin: 0.85rem 0 1rem;
+  margin: 1.35rem 0 0;
 }
 
 .buddy-risk-title {
@@ -251,25 +251,24 @@ section.main,
 }
 
 .buddy-voorjou-section {
-  margin-top: 1.7rem;
+  margin-top: 1.35rem;
 }
 
 .buddy-tile-chips {
-  margin: 0 0 14px;
-  padding: 0 0 12px;
-  border-bottom: 1px solid #e4eef6;
+  margin: 0 0 12px;
+  padding: 0;
 }
 
 .buddy-chat-section {
-  margin-top: 2.6rem;
-  padding-top: 0.85rem;
+  margin-top: 1.35rem;
+  padding-top: 0;
 }
 
 [data-testid="stElementContainer"]:has(.buddy-chat-title),
 [data-testid="stMarkdown"]:has(.buddy-chat-title),
 [data-testid="element-container"]:has(.buddy-chat-title) {
-  margin-top: 2.4rem !important;
-  padding-top: 0.35rem;
+  margin-top: 0 !important;
+  padding-top: 0;
 }
 
 .buddy-chat-title {
@@ -481,7 +480,8 @@ header[data-testid="stHeader"] {
   border: 1px solid #d5e6f2 !important;
   border-radius: 20px !important;
   padding: 0.15rem 0.35rem 0.25rem;
-  margin-bottom: 0.35rem;
+  margin-top: 1.35rem;
+  margin-bottom: 0;
 }
 
 /* Shared lever chrome so BRI matches taille / beweeg / slaap / suikerdranken */
@@ -553,7 +553,7 @@ header[data-testid="stHeader"] {
   border-radius: 24px;
   padding: 20px 22px 18px;
   box-shadow: 0 10px 28px rgba(26, 74, 110, 0.06);
-  margin: 0.55rem 0 1.15rem;
+  margin: 1.35rem 0 0;
 }
 
 .buddy-detail-kicker {
@@ -616,7 +616,7 @@ header[data-testid="stHeader"] {
 .buddy-step-card--wide {
   min-height: 0;
   height: auto;
-  margin-top: 0.85rem;
+  margin-top: 1.35rem;
 }
 
 .buddy-step-kicker {
@@ -662,6 +662,7 @@ header[data-testid="stHeader"] {
 
 .stApp:has(.buddy-detail-flag) [data-testid="stHorizontalBlock"]:has(.buddy-step-card) {
   align-items: stretch !important;
+  margin-top: 1.35rem;
 }
 
 .stApp:has(.buddy-detail-flag) [data-testid="column"]:has(.buddy-step-card),

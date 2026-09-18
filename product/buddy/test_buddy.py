@@ -235,6 +235,8 @@ class InterventionPageTests(unittest.TestCase):
         self.assertIn("groningen", page["kicker"].lower())
         self.assertIn("30", page["duration"])
         self.assertIn("gewicht", page["why"].lower())
+        self.assertIn("rondje plantsoen, grachten en martinitoren", page["title"].lower())
+        self.assertNotIn("een rondje:", page["title"].lower())
         self.assertNotIn("lus", page["title"].lower())
         self.assertNotIn("lus", page["route_name"].lower())
         self.assertNotIn("leefstijlknop", blob)
@@ -273,6 +275,16 @@ class SimplifyTests(unittest.TestCase):
         self.assertIn('class="buddy-tile"', app)
         self.assertIn("buddy-tile-blurb", app)
         self.assertIn("buddy-tile-chips", app)
+        tile_fn = app.split("def render_advice_tile", 1)[1].split("def _advice_chips", 1)[0]
+        self.assertLess(tile_fn.find("buddy-tile-kicker"), tile_fn.find("{chips_html}"))
+        self.assertLess(tile_fn.find("buddy-tile-title"), tile_fn.find("{chips_html}"))
+        self.assertNotIn("Meer over", app)
+        self.assertNotIn("back_top", app)
+        self.assertNotIn("← Terug naar de tegels", app)
+        self.assertEqual(app.count("Terug naar de tegels"), 1)
+        self.assertIn("De wandeling", app)
+        self.assertIn("Zo doe je het", app)
+        self.assertNotIn('"De route"', app)
         self.assertIn("render_advice_tile", app)
         self.assertIn("advice_sets", app)
         self.assertIn("buddy-tiles-flag", app)
@@ -634,7 +646,10 @@ class SystemPromptTests(unittest.TestCase):
         self.assertIn("Coaching, geen recept.", detail)
         self.assertIn("Wanneer", detail)
         self.assertIn("Hoe lang", detail)
-        self.assertIn("De route", detail)
+        self.assertIn("De wandeling", detail)
+        self.assertNotIn("De route", detail)
+        self.assertEqual(sum(1 for b in demo.button if b.label == "Terug naar de tegels"), 1)
+        self.assertFalse(any("←" in (b.label or "") for b in demo.button))
         self.assertIn("buddy-step-card--wide", detail)
         self.assertIn("Plantsoen, gracht, Martinitoren", detail)
         self.assertNotRegex(detail.lower(), r"\blus\b")
@@ -704,6 +719,89 @@ class SystemPromptTests(unittest.TestCase):
             demo.pills[0].set_value("persona-river" if pid != "persona-river" else "persona-sam")
             demo.run()
             self.assertEqual(demo.session_state.get("chat"), [])
+
+    def test_zaal_clickthrough_every_persona(self):
+        from streamlit.testing.v1 import AppTest
+
+        app_path = str(EXAMPLE_CONTRACT.parent / "app.py")
+        demo = AppTest.from_file(app_path, default_timeout=45)
+        demo.query_params["demo"] = "1"
+        demo.run()
+        self.assertFalse(demo.exception)
+
+        for pid, name in (
+            ("persona-river", "Pietje"),
+            ("persona-sam", "Sam"),
+            ("persona-noor", "Noor"),
+        ):
+            demo.pills[0].set_value(pid)
+            demo.run()
+            self.assertFalse(demo.exception, msg=f"{name} home crashed")
+            blob = " ".join(str(m.value) for m in demo.markdown)
+            self.assertRegex(blob, r"\d+\s*%", msg=f"{name} missing risk number")
+            self.assertIn("Risico op diabetes", blob)
+            self.assertNotIn("Alcohol (glazen per week)", blob)
+            self.assertFalse(any("alcohol" in (s.label or "").lower() for s in demo.slider))
+            self.assertNotIn("Creatinine", blob)
+            self.assertNotIn("Kreatinine", blob)
+            self.assertTrue(len(demo.pills) >= 1)
+
+            box = next(i for i in demo.text_input if i.label == "Je vraag")
+            box.set_value("Hoe kan ik meer wandelen?")
+            next(b for b in demo.button if b.label == "Vraag").click().run()
+            self.assertFalse(demo.exception, msg=f"{name} lifestyle chat crashed")
+            self.assertTrue(demo.session_state.get("chat"), msg=f"{name} no lifestyle reply")
+            self.assertFalse(any("OpenAI" in str(c.value) for c in demo.caption))
+
+            box = next(i for i in demo.text_input if i.label == "Je vraag")
+            box.set_value("Welke dosis metformine moet ik nemen?")
+            next(b for b in demo.button if b.label == "Vraag").click().run()
+            self.assertFalse(demo.exception, msg=f"{name} guardrail chat crashed")
+            _q, reply, source = demo.session_state.chat[-1]
+            self.assertTrue(str(source).startswith("guardrail"), msg=source)
+            self.assertIn("zorgverlener", reply)
+            self.assertFalse(any("OpenAI" in str(c.value) for c in demo.caption))
+
+            ctas = [b for b in demo.button if b.label not in {"Reset", "Vraag"}]
+            self.assertTrue(ctas, msg=f"{name} has no advice tiles")
+            self.assertFalse(any((b.label or "").startswith("Meer over") for b in ctas))
+
+            sport = next((b for b in ctas if "wandeling" in (b.label or "").lower() or "fietsrit" in (b.label or "").lower() or "training" in (b.label or "").lower()), None)
+            if sport:
+                sport.click().run()
+                self.assertFalse(demo.exception, msg=f"{name} sport detail crashed")
+                detail = " ".join(str(m.value) for m in demo.markdown)
+                self.assertFalse(demo.pills, msg=f"{name} pills on sport detail")
+                self.assertIn("Wanneer", detail)
+                self.assertIn("Hoe lang", detail)
+                self.assertIn("De wandeling", detail)
+                self.assertNotIn("De route", detail)
+                self.assertEqual(sum(1 for b in demo.button if "tegels" in (b.label or "").lower()), 1)
+                next(b for b in demo.button if b.label == "Terug naar de tegels").click().run()
+                self.assertFalse(demo.exception, msg=f"{name} back from sport crashed")
+                self.assertTrue(len(demo.pills) >= 1)
+
+            extra = next(
+                (
+                    b
+                    for b in demo.button
+                    if b.label
+                    not in {"Reset", "Vraag"}
+                    and not any(word in (b.label or "").lower() for word in ("wandeling", "fietsrit", "training"))
+                ),
+                None,
+            )
+            if extra:
+                extra.click().run()
+                self.assertFalse(demo.exception, msg=f"{name} extra detail crashed")
+                extra_blob = " ".join(str(m.value) for m in demo.markdown)
+                self.assertFalse(demo.pills, msg=f"{name} pills on extra detail")
+                self.assertIn("Zo doe je het", extra_blob)
+                self.assertNotIn("De route", extra_blob)
+                self.assertEqual(sum(1 for b in demo.button if "tegels" in (b.label or "").lower()), 1)
+                next(b for b in demo.button if b.label == "Terug naar de tegels").click().run()
+                self.assertFalse(demo.exception, msg=f"{name} back from extra crashed")
+                self.assertTrue(len(demo.pills) >= 1)
 
     def test_empty_question_matches_chat_copy(self):
         river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")
