@@ -228,26 +228,127 @@ def risk_band_nl(label: str) -> str:
     return RISK_BAND_NL.get(label, label)
 
 
-_HIDDEN_PATIENT_FACTOR_IDS = {"hbac", "hba1c", "hbac_t1", "hba1c_t1"}
+_HIDDEN_PATIENT_FACTOR_IDS = {
+    "hbac",
+    "hba1c",
+    "hbac_t1",
+    "hba1c_t1",
+    "htn_med",
+    "bkr",
+    "map",
+    "cho",
+    "tgl",
+    "hdc",
+    "ldc",
+    "hbf",
+    "age",
+    "education",
+    "depression",
+    "respiratory",
+    "family_t2dm",
+    "nhdc",
+    "thr",
+    "hip",
+}
+PATIENT_INFLUENCE_IDS = {
+    "waist",
+    "bri",
+    "bmi",
+    "weight",
+    "sports",
+    "cycle_commute",
+    "sleep",
+    "kcal",
+    "smoking",
+    "alcohol",
+}
+_HIDDEN_LABEL_NEEDLES = (
+    "hba1c",
+    "hbac",
+    "creatinine",
+    "kreatinine",
+    "bloeddrukmedic",
+    "medicatie",
+    "heupomtrek",
+)
 
 
 def _is_hidden_patient_factor(factor: dict[str, Any]) -> bool:
-    """HbA1c may drive the model; patients do not see it as a Voor-jou factor."""
+    """Labs, meds and HbA1c may drive the model; patients do not see them."""
     fid = str(factor.get("id") or "").lower()
     label = str(factor.get("label") or "").lower()
     if fid in _HIDDEN_PATIENT_FACTOR_IDS:
         return True
-    return "hba1c" in fid or "hbac" in fid or "hba1c" in label or "hbac" in label
+    return any(needle in fid or needle in label for needle in _HIDDEN_LABEL_NEEDLES)
+
+
+def patient_can_influence(factor: dict[str, Any]) -> bool:
+    """Voor jou: only lifestyle / body-shape levers the patient can change."""
+    if _is_hidden_patient_factor(factor):
+        return False
+    return str(factor.get("id") or "") in PATIENT_INFLUENCE_IDS
 
 
 def top_local_factors(payload: dict[str, Any], limit: int = 3) -> list[dict[str, Any]]:
-    """Patient-facing 'Voor jou': at most `limit` local factors, never HbA1c."""
-    visible = [
-        factor
-        for factor in factor_share(payload.get("top_factors") or [])
-        if not _is_hidden_patient_factor(factor)
-    ]
-    return visible[:limit]
+    """Patient-facing 'Voor jou': influenceable factors only, never HbA1c or labs.
+
+    Live model A often ranks labs first. Keep those out of sight, then fill from
+    the persona lifestyle card so each factor can still sit on a matching tile.
+    """
+    combined: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for factor in list(payload.get("top_factors") or []) + list(payload.get("persona_factors") or []):
+        if not patient_can_influence(factor):
+            continue
+        fid = str(factor.get("id") or "")
+        if not fid or fid in seen:
+            continue
+        seen.add(fid)
+        combined.append(factor)
+    return factor_share(combined)[:limit]
+
+
+def intervention_for_factor(
+    factor: dict[str, Any],
+    payload: dict[str, Any],
+    *,
+    exclude: set[str] | None = None,
+) -> dict[str, Any] | None:
+    """Matching lifestyle card for one Voor-jou factor, skipping already-used cards."""
+    skip = exclude or set()
+    fid = factor.get("id")
+    interventions = list(payload.get("interventions") or [])
+
+    def unused(item: dict[str, Any]) -> bool:
+        key = str(item.get("id") or item.get("theme") or "")
+        return bool(key) and key not in skip
+
+    for item in interventions:
+        if unused(item) and fid in (item.get("linked_factors") or []):
+            return item
+    theme = ACTIONABLE_THEME.get(str(fid or ""))
+    if theme:
+        for item in interventions:
+            if unused(item) and item.get("theme") == theme:
+                return item
+    return None
+
+
+def factor_action_pairs(
+    payload: dict[str, Any], limit: int = 3
+) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+    """Each influenceable factor followed by its unused matching tile."""
+    pairs: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    used: set[str] = set()
+    for factor in top_local_factors(payload, limit=8):
+        card = intervention_for_factor(factor, payload, exclude=used)
+        if not card:
+            continue
+        used.add(str(card.get("id") or card.get("theme") or ""))
+        pairs.append((factor, card))
+        if len(pairs) >= limit:
+            break
+    return pairs
 
 
 def pick_primary_intervention(payload: dict[str, Any]) -> dict[str, Any] | None:

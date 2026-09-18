@@ -27,6 +27,8 @@ from buddy_lib import (
     optional_llm_reply,
     persona_body,
     interventions_for_local_factors,
+    factor_action_pairs,
+    patient_can_influence,
     pick_primary_intervention,
     render_system_prompt,
     resolve_openai_api_key,
@@ -69,6 +71,16 @@ class FixtureTests(unittest.TestCase):
         self.assertTrue(shown)
         self.assertFalse(any(f["id"] == "hbac" for f in shown))
         self.assertFalse(any("hba1c" in str(f.get("label") or "").lower() for f in shown))
+        self.assertFalse(patient_can_influence({"id": "bkr", "label": "Creatinine"}))
+        self.assertFalse(patient_can_influence({"id": "htn_med", "label": "Bloeddrukmedicatie"}))
+        self.assertTrue(patient_can_influence({"id": "sports", "label": "Sport"}))
+        pairs = factor_action_pairs(river, 3)
+        self.assertEqual(len(pairs), 3)
+        self.assertEqual(len({card["id"] for _factor, card in pairs}), 3)
+        self.assertEqual(
+            [factor["id"] for factor, _card in pairs],
+            ["bmi", "waist", "sleep"],
+        )
 
     def test_bri_roundtrip_from_waist(self):
         from model_adapter import body_roundness_index, waist_cm_from_bri
@@ -233,7 +245,9 @@ class SimplifyTests(unittest.TestCase):
         self.assertIsNotNone(primary)
         self.assertEqual(primary["theme"], "sport")
         app = (EXAMPLE_CONTRACT.parent / "app.py").read_text(encoding="utf-8")
-        self.assertIn("3. Vraag het Boris", app)
+        self.assertNotIn("1. Je risico", app)
+        self.assertNotIn("2. Voor jou", app)
+        self.assertNotIn("3. Vraag het Boris", app)
         self.assertNotIn("4. Vraag het Boris", app)
         self.assertNotIn('st.expander("Vraag het Boris"', app)
         self.assertIn('st.expander("System prompt (demo)"', app)
@@ -254,16 +268,19 @@ class SimplifyTests(unittest.TestCase):
         self.assertNotIn('st.caption("Vaste tekst")', app)
         self.assertIn("buddy-whatif-flag", app)
         self.assertIn("format_factor_value", app)
-        self.assertIn("Taille (cm)", app)
+        self.assertNotIn("Taille (cm)", app)
         self.assertIn("Beweegminuten per week", app)
         self.assertIn("Slaap (uur per nacht)", app)
         self.assertIn("Suikerdranken per week", app)
         self.assertIn("whatif_reset", app)
         self.assertIn("whatif_bri", app)
-        self.assertIn("_sync_bri_to_waist", app)
+        self.assertIn("_bri_sentence", app)
+        self.assertNotIn("_sync_bri_to_waist", app)
         self.assertNotIn("whatif_bmi", app)
-        self.assertIn("2. Voor jou", app)
-        self.assertNotIn("2. Waarom jij", app)
+        self.assertIn("factor_action_pairs", app)
+        self.assertIn('form_submit_button("Vraag", type="primary")', app)
+        self.assertIn('type="primary"', app)
+        self.assertNotIn("2. Voor jou", app)
         self.assertNotIn("Lange termijn", app)
         self.assertNotIn('Nu {whatif', app)
         self.assertIn("over 5 jaar", app)
@@ -275,8 +292,10 @@ class SimplifyTests(unittest.TestCase):
         self.assertIn("buddy-tile-blurb", css)
         self.assertIn(".buddy-hero", css)
         self.assertIn("Shared lever chrome so BRI matches", css)
-        self.assertIn("Kleine stappen. Grote impact.", app)
+        self.assertIn("Je risico over 5 jaar", app)
+        self.assertNotIn("Kleine stappen. Grote impact.", app)
         self.assertIn("buddy-audience-flag", app)
+        self.assertIn('stElementContainer"]:has(.buddy-tile)', css)
 
 
 class CopyTests(unittest.TestCase):
@@ -356,6 +375,14 @@ class FinalModelOverlayTests(unittest.TestCase):
                 self.assertLessEqual(risk["risk_score"], 1.0)
             self.assertGreaterEqual(len(live["top_factors"]), 3)
             self.assertEqual(len(interventions_for_local_factors(live, 3)), 3)
+            self.assertTrue(live.get("persona_factors"))
+            pairs = factor_action_pairs(live, 3)
+            self.assertEqual(len(pairs), 3, msg=payload["patient"]["display_name"])
+            self.assertEqual(len({card["id"] for _factor, card in pairs}), 3)
+            for factor, _card in pairs:
+                self.assertTrue(patient_can_influence(factor), msg=factor.get("id"))
+                blob = f"{factor.get('id')} {factor.get('label')} {factor.get('patient_value')}"
+                self.assertNotRegex(blob, r"(?i)hba1c|hbac|kreatinine|creatinine|bloeddrukmedic|heupomtrek")
 
 
 class OpenAIHookTests(unittest.TestCase):
@@ -478,22 +505,25 @@ class SystemPromptTests(unittest.TestCase):
         self.assertFalse(any(t.label == "System prompt" for t in demo.text_area))
         self.assertFalse(any("OpenAI API key" in (i.label or "") for i in demo.text_input))
         self.assertNotIn("Hoi Pietje", [t.value for t in demo.title])
-        self.assertIn("3. Vraag het Boris", [s.value for s in demo.subheader])
-        self.assertIn("2. Voor jou", [s.value for s in demo.subheader])
-        self.assertNotIn("4. Vraag het Boris", [s.value for s in demo.subheader])
+        self.assertFalse(any(s.value.startswith(("1.", "2.", "3.")) for s in demo.subheader))
         self.assertTrue(len(demo.pills) >= 1)
         blob = " ".join(str(m.value) for m in demo.markdown)
-        self.assertIn("Kleine stappen. Grote impact.", blob)
+        self.assertIn("Je risico over 5 jaar", blob)
+        self.assertIn("Risico op diabetes", blob)
+        self.assertIn("over 5 jaar", blob)
+        self.assertIn("vorm van je taille", blob)
+        self.assertNotIn("Kleine stappen. Grote impact.", blob)
         self.assertNotIn("Small steps. Big impact.", blob)
         self.assertNotIn("<strong>Hoe:</strong>", blob)
         slider_labels = [s.label for s in demo.slider]
         self.assertIn("Gewicht (kg)", slider_labels)
-        self.assertIn("BRI", slider_labels)
+        self.assertNotIn("BRI", slider_labels)
         self.assertNotIn("BMI", slider_labels)
-        self.assertIn("Taille (cm)", slider_labels)
+        self.assertNotIn("Taille (cm)", slider_labels)
         self.assertIn("Beweegminuten per week", slider_labels)
         self.assertIn("Slaap (uur per nacht)", slider_labels)
         self.assertIn("Suikerdranken per week", slider_labels)
+        self.assertEqual(len(slider_labels), 4)
         self.assertFalse(any("lengte" in (label or "").lower() for label in slider_labels))
         self.assertFalse(any((n.label or "").strip() == "BMI" for n in demo.number_input))
         self.assertTrue(any(b.label == "Reset" for b in demo.button))
@@ -502,30 +532,30 @@ class SystemPromptTests(unittest.TestCase):
                 slider.set_value(200)
             elif slider.label == "Suikerdranken per week":
                 slider.set_value(14)
-            elif slider.label == "Taille (cm)":
-                slider.set_value(120.0)
             elif slider.label == "Slaap (uur per nacht)":
                 slider.set_value(8.0)
-            elif slider.label == "BRI":
-                slider.set_value(7.0)
+            elif slider.label == "Gewicht (kg)":
+                slider.set_value(100.0)
         demo.run()
         moved = {s.label: s.value for s in demo.slider}
         self.assertEqual(moved["Beweegminuten per week"], 200)
-        self.assertAlmostEqual(float(moved["BRI"]), 7.0, places=1)
+        self.assertEqual(moved["Gewicht (kg)"], 100.0)
         reset = next(b for b in demo.button if b.label == "Reset")
         reset.click().run()
         restored = {s.label: s.value for s in demo.slider}
         self.assertEqual(restored["Beweegminuten per week"], 30)
         self.assertEqual(restored["Suikerdranken per week"], 7)
-        self.assertEqual(restored["Taille (cm)"], 106)
+        self.assertEqual(restored["Gewicht (kg)"], 94.5)
         self.assertEqual(restored["Slaap (uur per nacht)"], 5.5)
-        self.assertAlmostEqual(float(restored["BRI"]), 5.64, places=2)
         blob_after = " ".join(str(m.value) for m in demo.markdown)
         self.assertIn("over 5 jaar", blob_after)
+        self.assertIn("BRI 5.6", blob_after)
         self.assertNotIn("Lange termijn", blob_after)
         self.assertNotIn("HbA1c", blob_after)
+        self.assertNotIn("Creatinine", blob_after)
+        self.assertNotIn("Bloeddrukmedicatie", blob_after)
+        self.assertNotIn("Heupomtrek", blob_after)
         self.assertNotIn("Nu 94.5 kg", blob_after)
-        self.assertTrue(any(s.value == "1. Je risico" for s in demo.subheader))
         self.assertFalse(any("Lange" in (s.value or "") for s in demo.subheader))
 
     def test_zaal_chat_replies_for_every_persona(self):

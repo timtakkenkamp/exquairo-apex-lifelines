@@ -25,7 +25,7 @@ _FEATURE_TO_FACTOR_ID = {
     "BMI_T1": "bmi",
     "BRI_T1": "bri",
     "WAIST_T1": "waist",
-    "HIP_T1": "waist",
+    "HIP_T1": "hip",
     "NHDC_T1": "cho",
     "THR_T1": "tgl",
     "HBAC_T1": "hbac",
@@ -98,6 +98,8 @@ def overlay_live_predictions(
 ) -> dict[str, Any]:
     """Return payload copy with risks/top_factors from live models."""
     updated = copy.deepcopy(payload)
+    # Persona lifestyle card — used when live top-5 is mostly labs the patient cannot change.
+    updated["persona_factors"] = copy.deepcopy(payload.get("top_factors") or [])
     body = persona_body(updated)
     patient = updated.get("patient") or {}
     persona_id = patient.get("persona_id")
