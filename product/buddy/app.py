@@ -475,7 +475,6 @@ if AUDIENCE:
         options=list(by_id),
         format_func=lambda pid: by_id[pid]["patient"]["display_name"],
         key="audience_persona_pills",
-        default=PERSONA_ORDER[0],
         label_visibility="collapsed",
         on_change=_sync_audience_persona,
     )

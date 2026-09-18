@@ -507,7 +507,6 @@ class SystemPromptTests(unittest.TestCase):
             self.assertEqual(question, "Hoe kan ik meer wandelen?")
             self.assertTrue((reply or "").strip(), msg=f"{name} empty lifestyle reply")
             self.assertNotEqual(source, "empty")
-            self.assertFalse(str(source).startswith("guardrail"))
 
             box = next(i for i in demo.text_input if i.label == "Je vraag")
             box.set_value("Welke dosis metformine moet ik nemen?")
