@@ -314,6 +314,8 @@ class SimplifyTests(unittest.TestCase):
         self.assertNotIn("whatif_alcohol", app)
         self.assertNotIn("Alcohol (glazen", app)
         self.assertIn("whatif_reset", app)
+        self.assertIn("_keep_whatif_sliders", app)
+        self.assertIn("_reseed_whatif_sliders", app)
         self.assertIn("whatif_bri", app)
         self.assertIn("_bri_sentence", app)
         self.assertNotIn("_sync_bri_to_waist", app)
@@ -703,6 +705,40 @@ class SystemPromptTests(unittest.TestCase):
         self.assertFalse(demo.exception)
         self.assertTrue(any(s.label == "Gewicht (kg)" for s in demo.slider))
         self.assertTrue(len(demo.pills) >= 1)
+        after_back = {s.label: s.value for s in demo.slider}
+        self.assertEqual(after_back["Gewicht (kg)"], 94.5)
+        self.assertEqual(after_back["Beweegminuten per week"], 30)
+        self.assertEqual(after_back["Suikerdranken per week"], 7)
+        self.assertEqual(after_back["Slaap (uur per nacht)"], 5.5)
+
+    def test_sliders_survive_walk_and_back(self):
+        from streamlit.testing.v1 import AppTest
+
+        demo = AppTest.from_file(str(EXAMPLE_CONTRACT.parent / "app.py"), default_timeout=45)
+        demo.query_params["demo"] = "1"
+        demo.run()
+        self.assertFalse(demo.exception)
+        for slider in demo.slider:
+            if slider.label == "Gewicht (kg)":
+                slider.set_value(100.0)
+            elif slider.label == "Beweegminuten per week":
+                slider.set_value(200)
+            elif slider.label == "Slaap (uur per nacht)":
+                slider.set_value(8.0)
+            elif slider.label == "Suikerdranken per week":
+                slider.set_value(14)
+        demo.run()
+        next(b for b in demo.button if "wandeling" in (b.label or "").lower()).click().run()
+        self.assertFalse(demo.exception)
+        self.assertFalse(demo.slider)
+        next(b for b in demo.button if b.label == "Terug naar de tegels").click().run()
+        self.assertFalse(demo.exception)
+        back = {s.label: s.value for s in demo.slider}
+        self.assertEqual(back["Gewicht (kg)"], 100.0)
+        self.assertEqual(back["Beweegminuten per week"], 200)
+        self.assertEqual(back["Slaap (uur per nacht)"], 8.0)
+        self.assertEqual(back["Suikerdranken per week"], 14)
+        self.assertNotIn("whatif_alcohol", (EXAMPLE_CONTRACT.parent / "app.py").read_text(encoding="utf-8"))
 
     def test_zaal_chat_replies_for_every_persona(self):
         from streamlit.testing.v1 import AppTest

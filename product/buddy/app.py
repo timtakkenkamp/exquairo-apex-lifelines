@@ -391,6 +391,29 @@ def _sync_audience_persona() -> None:
         st.session_state.audience_persona = picked
 
 
+# Streamlit drops unused widget keys. Detail pages do not render sliders, so
+# whatif_* is gone on the way back and the widgets remount at their min.
+_WHATIF_SLIDER_KEYS = (
+    "whatif_weight",
+    "whatif_move",
+    "whatif_sleep",
+    "whatif_drinks",
+)
+
+
+def _keep_whatif_sliders() -> None:
+    for key in _WHATIF_SLIDER_KEYS:
+        if key in st.session_state:
+            st.session_state[f"_keep_{key}"] = st.session_state[key]
+
+
+def _reseed_whatif_sliders() -> None:
+    for key in _WHATIF_SLIDER_KEYS:
+        kept = st.session_state.get(f"_keep_{key}")
+        if kept is not None:
+            st.session_state[key] = kept
+
+
 def apply_persona_state(persona_id: str, baseline: dict) -> None:
     body = persona_body(baseline)
     st.session_state.whatif_height_cm = body["height_cm"]
@@ -409,9 +432,12 @@ def apply_persona_state(persona_id: str, baseline: dict) -> None:
         st.session_state.whatif_persona = persona_id
         for key, value in defaults.items():
             st.session_state[key] = value
+        _keep_whatif_sliders()
     else:
+        _reseed_whatif_sliders()
         for key, value in defaults.items():
             st.session_state.setdefault(key, value)
+        _keep_whatif_sliders()
     if persona_changed:
         st.session_state.chat = []
         st.session_state.chat_persona = persona_id
@@ -517,6 +543,7 @@ payload = payload_from_whatif(baseline, use_live)
 patient = payload["patient"]
 
 if st.session_state.get("buddy_view") == "detail":
+    _keep_whatif_sliders()
     render_detail_page(
         st.session_state.get("detail_theme") or "sport",
         patient["display_name"],
