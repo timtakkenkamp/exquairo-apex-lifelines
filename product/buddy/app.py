@@ -128,7 +128,7 @@ def render_header(*, audience: bool = False) -> None:
   <div class="buddy-hero-mark">{face}</div>
   <div class="buddy-hero-copy">
     <div class="buddy-hero-name">Boris</div>
-    <div class="buddy-hero-line">Je risico over 5 jaar</div>
+    <div class="buddy-hero-line">Je elektronische gezondheidsbuddy</div>
   </div>
 </div>
 """,
@@ -460,7 +460,7 @@ if st.session_state.get("buddy_view") == "detail":
     st.stop()
 
 if AUDIENCE:
-    bar_l, bar_r = st.columns([1.35, 1.75], vertical_alignment="center")
+    bar_l, bar_r = st.columns([2.15, 1.2], vertical_alignment="center")
     with bar_l:
         render_header(audience=True)
     with bar_r:
