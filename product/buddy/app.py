@@ -609,15 +609,6 @@ if asked:
         system_prompt=st.session_state.get("system_prompt"),
     )
     st.session_state.chat.append((question, reply, source))
-for q, reply, source in st.session_state.chat:
+for q, reply, _source in st.session_state.chat:
     st.chat_message("user").write(q)
-    with st.chat_message("assistant"):
-        st.write(reply)
-        if source == "openai":
-            st.caption("OpenAI")
-        elif source.startswith("guardrail"):
-            st.caption("Guardrail — geen medisch advies")
-        elif source == "openai-auth":
-            st.caption("Sleutel geweigerd")
-        else:
-            st.caption("Vaste tekst")
+    st.chat_message("assistant").write(reply)

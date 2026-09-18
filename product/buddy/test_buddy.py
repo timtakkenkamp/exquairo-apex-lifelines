@@ -219,6 +219,8 @@ class SimplifyTests(unittest.TestCase):
         self.assertIn("_sync_audience_persona", app)
         self.assertIn("ask_buddy_{persona_id}", app)
         self.assertIn("buddy_ask_{persona_id}", app)
+        self.assertNotIn('st.caption("OpenAI")', app)
+        self.assertNotIn('st.caption("Vaste tekst")', app)
         self.assertIn("buddy-whatif-flag", app)
         self.assertIn("format_factor_value", app)
         self.assertIn("Taille (cm)", app)
@@ -507,6 +509,15 @@ class SystemPromptTests(unittest.TestCase):
             self.assertEqual(question, "Hoe kan ik meer wandelen?")
             self.assertTrue((reply or "").strip(), msg=f"{name} empty lifestyle reply")
             self.assertNotEqual(source, "empty")
+            captions = [str(c.value) for c in demo.caption]
+            self.assertFalse(
+                any(
+                    label in cap
+                    for cap in captions
+                    for label in ("OpenAI", "Guardrail", "Vaste tekst", "Sleutel geweigerd")
+                ),
+                msg=f"{name} still shows a source caption: {captions}",
+            )
 
             box = next(i for i in demo.text_input if i.label == "Je vraag")
             box.set_value("Welke dosis metformine moet ik nemen?")
