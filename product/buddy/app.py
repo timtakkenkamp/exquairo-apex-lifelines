@@ -321,6 +321,18 @@ def _secrets_openai_key() -> str:
         return ""
 
 
+def _sync_audience_persona() -> None:
+    """Keep zaal pills as the source of truth without a mid-script rerun.
+
+    Pietje is the pills default (`persona-river`). A form submit can remount
+    pills back to that default for one run; a `st.rerun()` then aborted before
+    the chat form was processed — so only Pietje's Vraag-click survived.
+    """
+    picked = st.session_state.get("audience_persona_pills")
+    if picked in PERSONA_ORDER:
+        st.session_state.audience_persona = picked
+
+
 def apply_persona_state(persona_id: str, baseline: dict) -> None:
     body = persona_body(baseline)
     st.session_state.whatif_height_cm = body["height_cm"]
@@ -384,9 +396,11 @@ if st.session_state.pop("system_prompt_reset", False):
 
 if AUDIENCE:
     use_live = use_live_default
-    persona_id = st.session_state.get("audience_persona") or PERSONA_ORDER[0]
-    if persona_id not in by_id:
-        persona_id = PERSONA_ORDER[0]
+    if st.session_state.get("audience_persona") not in by_id:
+        st.session_state.audience_persona = PERSONA_ORDER[0]
+    persona_id = st.session_state.audience_persona
+    # Reassert before pills mount so a remount cannot snap back to Pietje.
+    st.session_state.audience_persona_pills = persona_id
 else:
     with st.sidebar:
         st.markdown("### Boris")
@@ -456,17 +470,15 @@ render_header(audience=AUDIENCE)
 st.title(f"Hoi {patient['display_name']}")
 if AUDIENCE:
     st.markdown('<div class="buddy-pills-flag" aria-hidden="true"></div>', unsafe_allow_html=True)
-    picked = st.pills(
+    st.pills(
         "Wie ben jij?",
         options=list(by_id),
         format_func=lambda pid: by_id[pid]["patient"]["display_name"],
         key="audience_persona_pills",
-        default=persona_id,
+        default=PERSONA_ORDER[0],
         label_visibility="collapsed",
+        on_change=_sync_audience_persona,
     )
-    if picked and picked != persona_id:
-        st.session_state.audience_persona = picked
-        st.rerun()
 
 # 1) Risico — slider first so the two big numbers stay live
 st.subheader("1. Je risico")
@@ -580,11 +592,12 @@ if not AUDIENCE:
         st.caption(f"Verbonden met OpenAI · {OPENAI_MODEL}")
     else:
         st.caption("Geen API-sleutel. Plak er een in de sidebar — tot die tijd vaste teksten.")
-with st.form("ask_buddy", clear_on_submit=True):
+with st.form(f"ask_buddy_{persona_id}", clear_on_submit=True):
     question = st.text_input(
         "Je vraag",
         placeholder=CHAT_PLACEHOLDER,
         label_visibility="collapsed",
+        key=f"buddy_ask_{persona_id}",
     )
     asked = st.form_submit_button("Vraag")
 if asked:

@@ -216,6 +216,9 @@ class SimplifyTests(unittest.TestCase):
         self.assertIn('vertical_alignment="bottom"', app)
         self.assertIn("Past bij jou", app)
         self.assertIn("audience_persona_pills", app)
+        self.assertIn("_sync_audience_persona", app)
+        self.assertIn("ask_buddy_{persona_id}", app)
+        self.assertIn("buddy_ask_{persona_id}", app)
         self.assertIn("buddy-whatif-flag", app)
         self.assertIn("format_factor_value", app)
         self.assertIn("Taille (cm)", app)
@@ -473,6 +476,51 @@ class SystemPromptTests(unittest.TestCase):
         self.assertEqual(restored["Slaap (uur per nacht)"], 5.5)
         self.assertAlmostEqual(float(restored["BMI"]), 31.2, places=1)
         self.assertIn("Hoi Pietje", [t.value for t in demo.title])
+
+    def test_zaal_chat_replies_for_every_persona(self):
+        from streamlit.testing.v1 import AppTest
+
+        app_path = str(EXAMPLE_CONTRACT.parent / "app.py")
+        demo = AppTest.from_file(app_path, default_timeout=45)
+        demo.query_params["demo"] = "1"
+        demo.run()
+        self.assertFalse(demo.exception)
+
+        for pid, name in (
+            ("persona-river", "Pietje"),
+            ("persona-sam", "Sam"),
+            ("persona-noor", "Noor"),
+        ):
+            demo.pills[0].set_value(pid)
+            demo.run()
+            self.assertFalse(demo.exception, msg=f"{name} page crashed")
+            self.assertIn(f"Hoi {name}", [t.value for t in demo.title])
+            self.assertEqual(demo.session_state.get("audience_persona"), pid)
+
+            box = next(i for i in demo.text_input if i.label == "Je vraag")
+            box.set_value("Hoe kan ik meer wandelen?")
+            next(b for b in demo.button if b.label == "Vraag").click().run()
+            self.assertFalse(demo.exception, msg=f"{name} lifestyle chat crashed")
+            chat = demo.session_state.get("chat") or []
+            self.assertTrue(chat, msg=f"{name} got no lifestyle reply")
+            question, reply, source = chat[-1]
+            self.assertEqual(question, "Hoe kan ik meer wandelen?")
+            self.assertTrue((reply or "").strip(), msg=f"{name} empty lifestyle reply")
+            self.assertNotEqual(source, "empty")
+            self.assertFalse(str(source).startswith("guardrail"))
+
+            box = next(i for i in demo.text_input if i.label == "Je vraag")
+            box.set_value("Welke dosis metformine moet ik nemen?")
+            next(b for b in demo.button if b.label == "Vraag").click().run()
+            self.assertFalse(demo.exception, msg=f"{name} medical chat crashed")
+            question, reply, source = demo.session_state.chat[-1]
+            self.assertEqual(question, "Welke dosis metformine moet ik nemen?")
+            self.assertTrue(str(source).startswith("guardrail"), msg=source)
+            self.assertIn("zorgverlener", reply)
+
+            demo.pills[0].set_value("persona-river" if pid != "persona-river" else "persona-sam")
+            demo.run()
+            self.assertEqual(demo.session_state.get("chat"), [])
 
     def test_empty_question_matches_chat_copy(self):
         river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")
