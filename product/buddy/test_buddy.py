@@ -389,8 +389,45 @@ class GuardrailTests(unittest.TestCase):
         self.assertEqual(source, "guardrail")
         self.assertEqual(text, DEFLECT_MESSAGE)
 
+    def test_groningen_walk_question_is_not_guardrail(self):
+        river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")
+        question = "geef me een leuke wandeling in Groningen"
+        self.assertFalse(is_medical_or_triage(question))
+        text, source = answer_question(question, river)
+        self.assertNotIn(source, {"guardrail", "guardrail-post"})
+        self.assertNotEqual(text, DEFLECT_MESSAGE)
+        self.assertIn("wandel", text.lower())
+        text, source = answer_question("welke dosering metformine", river)
+        self.assertEqual(source, "guardrail")
+        self.assertEqual(text, DEFLECT_MESSAGE)
 
-class FinalModelOverlayTests(unittest.TestCase):
+        class _Msg:
+            content = (
+                "Start bij het plantsoen. Neem de gracht en stop bij de Martinitoren."
+            )
+
+        class _Choice:
+            message = _Msg()
+
+        class _Resp:
+            choices = [_Choice()]
+
+        class _Completions:
+            def create(self, **kwargs):
+                return _Resp()
+
+        class _Chat:
+            completions = _Completions()
+
+        class _Client:
+            def __init__(self, **kwargs):
+                self.chat = _Chat()
+
+        with unittest.mock.patch("openai.OpenAI", _Client):
+            text, source = answer_question(question, river, api_key="sk-test")
+        self.assertEqual(source, "openai")
+        self.assertNotEqual(text, DEFLECT_MESSAGE)
+        self.assertIn("plantsoen", text.lower())
     def test_live_final_models_score_all_personas(self):
         from live_model import models_available, overlay_live_predictions
 

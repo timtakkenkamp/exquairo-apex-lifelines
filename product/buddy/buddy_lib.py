@@ -1090,9 +1090,15 @@ def optional_llm_reply(
         return fallback, "openai-error"
 
 
+# Output filter: real medical advice only. Bare start/neem/stop/take are
+# normal walk/food Dutch ("Start bij het plantsoen", "Neem de gracht").
 _MEDICAL_ADVICE_OUT = re.compile(
-    r"\b(take|start|stop|dose|mg\b|prescribe|diagnos|"
-    r"neem\b|dosering|voorschrijf|diagnose|metformin\w*|insulin\w*)\b",
+    r"\b("
+    r"dose|dosering|mg\b|prescribe|voorschrijf\w*|"
+    r"diagnos\w*|"
+    r"metformin\w*|insulin\w*|"
+    r"medicijn\w*|geneesmiddel\w*|prescription"
+    r")\b",
     re.IGNORECASE,
 )
 
