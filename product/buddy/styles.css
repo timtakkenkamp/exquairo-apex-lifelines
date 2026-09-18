@@ -97,15 +97,17 @@ section.main,
 }
 
 .buddy-hero-face {
-  width: 88px;
-  height: auto;
+  width: 128px !important;
+  min-width: 128px;
+  max-width: none !important;
+  height: auto !important;
   display: block;
 }
 
 .buddy-hero-fallback {
-  width: 88px;
-  height: 88px;
-  border-radius: 22px;
+  width: 128px;
+  height: 128px;
+  border-radius: 28px;
   background:
     radial-gradient(circle at 50% 36%, #eaf4fb 0 36%, #3d8bbf 38% 100%);
 }
@@ -132,11 +134,11 @@ section.main,
 }
 
 .buddy-hero-name {
-  font-size: 1.85rem;
+  font-size: 2.2rem;
   font-weight: 800;
   color: #1a4a6e;
   letter-spacing: -0.03em;
-  line-height: 1.1;
+  line-height: 1.05;
 }
 
 .buddy-hero-line {
@@ -156,16 +158,17 @@ section.main,
 
   .buddy-hero-face,
   .buddy-hero-fallback {
-    width: 68px;
+    width: 96px !important;
+    min-width: 96px;
   }
 
   .buddy-hero-fallback {
-    height: 68px;
-    border-radius: 18px;
+    height: 96px;
+    border-radius: 22px;
   }
 
   .buddy-hero-name {
-    font-size: 1.45rem;
+    font-size: 1.7rem;
   }
 
   .buddy-hero-line {

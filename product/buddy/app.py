@@ -16,14 +16,14 @@ from buddy_lib import (
     apply_lifestyle_overlay,
     apply_weight_whatif,
     clip,
-    factor_direction_nl,
     factor_display_label,
     load_default_system_prompt,
     load_personas,
     openai_key_configured,
     pct,
     persona_body,
-    factor_action_pairs,
+    advice_sets,
+    advice_why,
     linked_factor_labels,
     patient_can_influence,
     resolve_openai_api_key,
@@ -118,7 +118,10 @@ def _mascot_data_uri() -> str:
 def render_header(*, audience: bool = False) -> None:
     uri = _mascot_data_uri()
     if uri:
-        face = f'<img class="buddy-hero-face" src="{uri}" alt="Boris" />'
+        face = (
+            f'<img class="buddy-hero-face" src="{uri}" alt="Boris" width="128" '
+            f'style="width:128px;max-width:none;height:auto;display:block;" />'
+        )
     else:
         face = '<div class="buddy-hero-face buddy-hero-fallback" aria-hidden="true"></div>'
     band = "buddy-hero buddy-hero--zaal" if audience else "buddy-hero"
@@ -176,25 +179,23 @@ def format_factor_value(factor: dict) -> str:
     return f"{pretty} {unit}".strip()
 
 
-def render_factor_action_tile(factor: dict, item: dict) -> None:
-    """One column card: this person's factor + the matching action + CTA.
-
-    Factor copy uses inline styles so Streamlit cannot strip it and leave
-    an action-only card (or a loose lab leftover).
-    """
-    theme = item.get("theme") or "sport"
+def render_advice_tile(factors: list[dict], item: dict, theme: str) -> None:
+    """One column card: related factors grouped under one action + CTA."""
     meta = THEME_META.get(theme, {"label": "Stap"})
     colors = THEME_COLORS.get(theme, THEME_COLORS["sport"])
     blurb = item.get("summary") or item.get("explanation") or ""
-    shown = format_factor_value(factor)
-    why = factor_direction_nl(str(factor.get("direction") or ""))
-    why_line = f"{shown} · {why}" if shown else why
-    label = factor_display_label(factor)
+    bits = []
+    for factor in factors:
+        label = factor_display_label(factor)
+        shown = format_factor_value(factor)
+        bits.append(f"{label} {shown}".strip() if shown else label)
+    factor_line = " · ".join(bits)
+    why_line = advice_why(theme, factors)
     st.markdown(
         f"""
 <div class="buddy-tile" style="--buddy-tile-bar:{colors["bar"]};--buddy-tile-ink:{colors["ink"]};background:#fff;border:1px solid #d5e6f2;border-top:8px solid {colors["bar"]};border-radius:20px 20px 0 0;padding:16px 16px 14px;">
   <div class="buddy-tile-factor" style="margin:0 0 12px;padding:0 0 10px;border-bottom:1px solid #e4eef6;">
-    <div class="buddy-tile-factor-label" style="font-weight:750;color:#1A4A6E;font-size:0.95rem;">{label}</div>
+    <div class="buddy-tile-factor-label" style="font-weight:750;color:#1A4A6E;font-size:0.95rem;">{factor_line}</div>
     <div class="buddy-tile-factor-why" style="color:#3d5a70;font-size:0.86rem;margin-top:3px;">{why_line}</div>
   </div>
   <div class="buddy-tile-kicker" style="font-size:0.75rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:{colors["ink"]};">{meta["label"]}</div>
@@ -460,19 +461,16 @@ if st.session_state.get("buddy_view") == "detail":
     st.stop()
 
 if AUDIENCE:
-    bar_l, bar_r = st.columns([2.15, 1.2], vertical_alignment="center")
-    with bar_l:
-        render_header(audience=True)
-    with bar_r:
-        st.markdown('<div class="buddy-pills-flag" aria-hidden="true"></div>', unsafe_allow_html=True)
-        st.pills(
-            "Wie ben jij?",
-            options=list(by_id),
-            format_func=lambda pid: by_id[pid]["patient"]["display_name"],
-            key="audience_persona_pills",
-            label_visibility="collapsed",
-            on_change=_sync_audience_persona,
-        )
+    render_header(audience=True)
+    st.markdown('<div class="buddy-pills-flag" aria-hidden="true"></div>', unsafe_allow_html=True)
+    st.pills(
+        "Wie ben jij?",
+        options=list(by_id),
+        format_func=lambda pid: by_id[pid]["patient"]["display_name"],
+        key="audience_persona_pills",
+        label_visibility="collapsed",
+        on_change=_sync_audience_persona,
+    )
 else:
     render_header(audience=False)
 
@@ -488,6 +486,7 @@ with st.container(border=True):
         45.0,
         140.0,
         step=0.5,
+        format="%.1f",
         key="whatif_weight",
         on_change=_sync_weight_to_shape,
     )
@@ -499,9 +498,10 @@ with st.container(border=True):
         st.slider("Slaap (uur per nacht)", 4.0, 10.0, step=0.5, key="whatif_sleep")
     with dcol:
         st.slider("Suikerdranken per week", 0, 21, step=1, key="whatif_drinks")
-    if st.button("Reset"):
-        st.session_state.whatif_reset = True
-        st.rerun()
+    if not AUDIENCE:
+        if st.button("Reset"):
+            st.session_state.whatif_reset = True
+            st.rerun()
 
 payload = payload_from_whatif(baseline, use_live)
 patient = payload["patient"]
@@ -518,15 +518,16 @@ for factor in list(payload.get("top_factors") or []) + list(payload.get("persona
     kept_factors.append(factor)
 payload["top_factors"] = kept_factors
 st.markdown('<div class="buddy-voorjou-section buddy-tiles-flag">', unsafe_allow_html=True)
-pairs = [
-    (factor, item)
-    for factor, item in factor_action_pairs(payload, limit=3)
-    if patient_can_influence(factor)
+sets = [
+    (factors, item, theme)
+    for factors, item, theme in advice_sets(payload, limit=3)
+    if any(patient_can_influence(factor) for factor in factors)
 ]
-row = st.columns(3)
-for col, (factor, item) in zip(row, pairs):
-    with col:
-        render_factor_action_tile(factor, item)
+if sets:
+    row = st.columns(len(sets))
+    for col, (factors, item, theme) in zip(row, sets):
+        with col:
+            render_advice_tile(factors, item, theme)
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown('<div class="buddy-chat-section">', unsafe_allow_html=True)

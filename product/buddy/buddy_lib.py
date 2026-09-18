@@ -334,21 +334,94 @@ def intervention_for_factor(
     return None
 
 
+MOVEMENT_GROUP_IDS = frozenset({"bmi", "bri", "waist", "weight", "sports", "cycle_commute"})
+FOOD_GROUP_IDS = frozenset({"kcal", "alcohol"})
+SLEEP_GROUP_IDS = frozenset({"sleep"})
+
+ADVICE_GROUPS: tuple[tuple[str, frozenset[str], tuple[str, ...]], ...] = (
+    ("sport", MOVEMENT_GROUP_IDS, ("activity-walks",)),
+    ("food", FOOD_GROUP_IDS, ("food-pattern", "food-maintain")),
+    ("sleep", SLEEP_GROUP_IDS, ("sleep-wind-down", "sleep-keep")),
+)
+
+
+def visible_influenceable_factors(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Influenceable factors on this persona, labs and meds stripped."""
+    combined: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for factor in list(payload.get("top_factors") or []) + list(payload.get("persona_factors") or []):
+        if not patient_can_influence(factor):
+            continue
+        fid = str(factor.get("id") or "")
+        if not fid or fid in seen:
+            continue
+        seen.add(fid)
+        combined.append(factor)
+    return factor_share(combined)
+
+
+def _intervention_for_theme(
+    payload: dict[str, Any],
+    theme: str,
+    preferred_ids: tuple[str, ...] = (),
+) -> dict[str, Any] | None:
+    cards = list(payload.get("interventions") or [])
+    for pid in preferred_ids:
+        for item in cards:
+            if item.get("id") == pid:
+                return item
+    for item in cards:
+        if item.get("theme") == theme:
+            return item
+    if theme == "food":
+        for item in cards:
+            if item.get("theme") == "alcohol":
+                return item
+    return None
+
+
+def advice_why(theme: str, factors: list[dict[str, Any]]) -> str:
+    """One short Dutch line per advice set — not the same risk sentence three times."""
+    ids = {str(factor.get("id") or "") for factor in factors}
+    if theme == "sport":
+        if ids & {"bmi", "bri", "waist", "weight"}:
+            return "Gewicht, taille en BRI horen bij één wandelstap."
+        return "Bewegen dat je volhoudt, geen sportschema."
+    if theme == "food":
+        if "alcohol" in ids and "kcal" not in ids:
+            return "Wat je drinkt is een knop die je zelf zet."
+        return "Eten en suikerdrank zijn knoppen die je zelf zet."
+    return "Een rustiger avond, geen slaaprecept."
+
+
+def advice_sets(
+    payload: dict[str, Any], limit: int = 3
+) -> list[tuple[list[dict[str, Any]], dict[str, Any], str]]:
+    """Voor jou: related factors grouped under one action tile.
+
+    Skip a group when this persona has no factor in it. Do not invent factors.
+    """
+    by_id = {str(factor.get("id") or ""): factor for factor in visible_influenceable_factors(payload)}
+    sets: list[tuple[list[dict[str, Any]], dict[str, Any], str]] = []
+    for theme, ids, preferred in ADVICE_GROUPS:
+        group = [by_id[fid] for fid in ids if fid in by_id]
+        if not group:
+            continue
+        group.sort(key=lambda factor: float(factor.get("importance") or 0), reverse=True)
+        card = _intervention_for_theme(payload, theme, preferred)
+        if not card:
+            continue
+        sets.append((group, card, theme))
+        if len(sets) >= limit:
+            break
+    return sets
+
+
 def factor_action_pairs(
     payload: dict[str, Any], limit: int = 3
 ) -> list[tuple[dict[str, Any], dict[str, Any]]]:
-    """Each influenceable factor followed by its unused matching tile."""
-    pairs: list[tuple[dict[str, Any], dict[str, Any]]] = []
-    used: set[str] = set()
-    for factor in top_local_factors(payload, limit=8):
-        card = intervention_for_factor(factor, payload, exclude=used)
-        if not card:
-            continue
-        used.add(str(card.get("id") or card.get("theme") or ""))
-        pairs.append((factor, card))
-        if len(pairs) >= limit:
-            break
-    return pairs
+    """Compatibility: first factor of each advice set + its action card."""
+    return [(group[0], card) for group, card, _theme in advice_sets(payload, limit)]
 
 
 def pick_primary_intervention(payload: dict[str, Any]) -> dict[str, Any] | None:
