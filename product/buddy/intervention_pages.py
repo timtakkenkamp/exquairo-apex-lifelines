@@ -9,27 +9,22 @@ from typing import Any
 MOVEMENT_GRONINGEN: dict[str, Any] = {
     "theme": "sport",
     "kicker": "Beweging · Groningen",
-    "title": "Een vriendelijke lus: Noorderplantsoen → grachten → Martinitoren",
+    "title": "Een rondje: Noorderplantsoen, grachten, Martinitoren",
     "coach": (
         "Geen schema voor atleten — een rondje dat je kunt onthouden. "
         "Groen, water, en de toren als herkenningspunt. Trek je jas aan en begin klein."
     ),
-    "why": (
-        "Regelmatig wandelen is een leefstijlknop die vaak samenhangt met gewicht, taille "
-        "en hoe je lichaam suiker verwerkt. Deze demo koppelt dat aan een rustiger "
-        "korte- en lange-termijn risico-beeld (proxy: HbA1c). Het is coaching, "
-        "geen diagnose en geen trainingsvoorschrift."
-    ),
+    "why": "Wandelen hoort bij je gewicht en taille. Geen schema, geen recept.",
     "when": "Het liefst na een maaltijd, drie keer deze week — dezelfde schoenen, hetzelfde startpunt.",
     "duration": "30–45 minuten (ongeveer 3,5 km). Liever 25 minuten volhouden dan 60 minuten uitstellen.",
     "intensity": "Stevig wandeltempo: je kunt nog praten, je hoeft niet te hijgen. Bankjes onderweg zijn oké.",
-    "route_name": "Plantsoen–gracht–Martini-lus",
+    "route_name": "Plantsoen, gracht, Martinitoren",
     "route_steps": [
         "Start bij de hoofdingang van het Noorderplantsoen (Kruissingel / Oranjesingel).",
         "Loop het park rond: blijf bij de vijver en de grote bomen, met de klok mee.",
         "Verlaat het plantsoen richting de Noorderhaven en volg het water de stad in.",
         "Houd de Diepenring aan tot je de Martinitoren goed ziet (Vismarkt / Grote Markt-kant).",
-        "Keer terug via de Nieuwe Ebbingestraat of Boteringestraat naar het plantsoen — lus sluiten.",
+        "Keer terug via de Nieuwe Ebbingestraat of Boteringestraat naar het plantsoen — rondje afmaken.",
     ],
     "tip": "Regendag? Doe alleen het plantsoenrondje (15–20 min) en streep de week niet weg.",
 }
@@ -42,11 +37,7 @@ FOOD_PAGE: dict[str, Any] = {
         "Niet een heel dieet omgooien. Kies één vast moment — bijvoorbeeld de middag op het Forum "
         "of thuis na het eten — en wissel het suikerdrankje in voor water of thee zonder suiker."
     ),
-    "why": (
-        "Rustige maaltijden en minder suikerhoudende dranken zijn leefstijlkeuzes die in deze demo "
-        "gekoppeld zijn aan BMI en taille. Dat kan het risico-beeld iets rustiger maken. "
-        "Geen dieetvoorschrift, geen medisch advies."
-    ),
+    "why": "Minder suikerdrank en rustig eten horen bij gewicht en taille. Geen dieet.",
     "when": "Kies één vast moment per dag, zeven dagen achter elkaar.",
     "duration": "De wissel zelf duurt geen extra tijd — alleen de keuze.",
     "intensity": "Klein en saai is beter dan streng en kort.",
@@ -69,10 +60,7 @@ SLEEP_PAGE: dict[str, Any] = {
         "Slaap is geen prestatie. Een vast avondritueel maakt de dag kleiner, "
         "niet perfecter."
     ),
-    "why": (
-        "Onregelmatige slaap hoort in deze demo bij het lokale risico-beeld. "
-        "Een rustiger avond is leefstijlcoaching, geen behandeling van slaapproblemen."
-    ),
+    "why": "Een rustiger avond hoort bij je slaap. Geen slaaprecept.",
     "when": "Dertig minuten voor je gekozen bedtijd, vijf avonden deze week.",
     "duration": "30 minuten schermvrij — niet meer.",
     "intensity": "Licht dimmen, geen extra oefeningen verplicht.",
@@ -82,7 +70,7 @@ SLEEP_PAGE: dict[str, Any] = {
         "Leg de telefoon in een andere kamer, niet op het nachtkastje.",
         "Zet een wekker in die andere kamer — ochtend telt ook.",
         "Doe één rustig ding: thee, boek, of alleen het licht lager.",
-        "Late avond gehad? Volgende nacht dezelfde tijd, geen uitslaapmarathon.",
+        "Late avond gehad? Volgende nacht dezelfde tijd, niet uitslapen tot de middag.",
     ],
     "tip": "Lukt vijf avonden niet? Begin met woensdag tot en met vrijdag. Weekend mag later.",
 }
@@ -95,13 +83,10 @@ SMOKING_PAGE: dict[str, Any] = {
         "Geen stoppen-met-roken-kuur hier. Wel twee blokken die je vooraf kiest. "
         "Hulpmiddelen en ontwenning horen bij je zorgteam."
     ),
-    "why": (
-        "Roken is in deze demo een lokale leefstijlknop. Minder rookmomenten "
-        "kunnen het risico-beeld rustiger maken. Dat is coaching, geen behandeling."
-    ),
+    "why": "Twee dagen zonder sigaret. Coaching, geen behandeling.",
     "when": "Twee dagen die je van tevoren in je agenda zet.",
     "duration": "De hele dag rookvrij — of twee vaste blokken van vier uur als een hele dag te groot is.",
-    "intensity": "Geen wilskrachtwedstrijd. Kies dagen waarop de fietsrit al staat.",
+    "intensity": "Geen wedstrijd met jezelf. Kies dagen waarop de fietsrit al staat.",
     "route_name": "Zo kies je de blokken",
     "route_steps": [
         "Kies twee dagen (bijvoorbeeld dinsdag en donderdag).",
@@ -121,10 +106,7 @@ ALCOHOL_PAGE: dict[str, Any] = {
         "Geen verbod. Twee avonden met bruiswater dat je echt lust, "
         "zodat de rest van de week herkenbaar blijft."
     ),
-    "why": (
-        "Alcoholpatroon is in deze demo een lokale knop. Twee rustige avonden "
-        "zijn een herhaalbare leefstijlstap, geen behandeling van alcoholgebruik."
-    ),
+    "why": "Twee avonden zonder alcohol. Geen behandeling.",
     "when": "Twee doordeweekse avonden, vooraf gekozen.",
     "duration": "De avond zelf — vanaf thuiskomen tot slapen.",
     "intensity": "Laag. Weekend mag het oude patroon zijn tot deze twee avonden vanzelfsprekend voelen.",
@@ -141,10 +123,10 @@ ALCOHOL_PAGE: dict[str, Any] = {
 
 GENERIC_STUB: dict[str, Any] = {
     "theme": "generic",
-    "kicker": "Leefstijl · kleine stap",
+    "kicker": "Kleine stap",
     "title": "Eén kleine herhaalbare stap",
     "coach": "Kies één ding dat je morgen opnieuw kunt doen. Geen schema, geen kuur.",
-    "why": "Leefstijlknoppen horen bij het demobeeld, niet bij medicatie of triage.",
+    "why": "Eén kleine stap die je morgen opnieuw kunt doen.",
     "when": "Morgen, op een vast tijdstip.",
     "duration": "Tien minuten is genoeg om te starten.",
     "intensity": "Laag. Herhalen telt meer dan zwaar.",

@@ -101,7 +101,7 @@
       "theme": "smoking",
       "title": "Meer rookvrije dagen",
       "summary": "Houd de fietsrit en voeg deze week twee volledig rookvrije dagen toe. Geen middelen hier — je zorgteam helpt als je extra steun wilt.",
-      "explanation": "Roken is bij jou de sterkste lokale knop. We maken geen stopprogramma: twee dagen die je zelf kiest, terwijl de fietsrit blijft staan.",
+      "explanation": "Roken weegt bij jou het zwaarst. We maken geen stopprogramma: twee dagen die je zelf kiest, terwijl de fietsrit blijft staan.",
       "how": "Kies twee dagen vooruit. Zet de fietsrit vast. Extra steun of hulpmiddelen? Dat hoort bij je zorgteam, niet bij Boris.",
       "linked_factors": ["smoking"]
     },
@@ -110,7 +110,7 @@
       "theme": "alcohol",
       "title": "Twee avonden zonder alcohol",
       "summary": "Kies twee doordeweekse avonden zonder alcohol. Vervang het gebruikelijke glas door bruiswater dat je echt lust.",
-      "explanation": "Alcohol is je tweede lokale knop. Geen verbod: twee avonden met iets dat je echt lust, zodat de rest van de week herkenbaar blijft.",
+      "explanation": "Alcohol is het tweede punt. Geen verbod: twee avonden met iets dat je echt lust, zodat de rest van de week herkenbaar blijft.",
       "how": "Zet woensdag en donderdag in je agenda. Glas bruiswater al in de koelkast. Weekend mag het oude patroon zijn — eerst de twee avonden.",
       "linked_factors": ["alcohol"]
     },
@@ -118,13 +118,13 @@
       "id": "keep-cycling",
       "theme": "sport",
       "title": "Bescherm je fietsrit",
-      "summary": "Je fietsen telt al als plus. Zet drie fietsdagen vast; een regendag wordt een wandeling, geen afschrijving.",
-      "explanation": "Fietsen naar werk verlaagt in deze demo je risico-beeld. Bescherm wat al werkt in plaats van een nieuw schema te starten.",
+      "summary": "Je fietsen telt al als plus. Zet drie fietsdagen vast; een regendag wordt een wandeling, dat telt ook.",
+      "explanation": "Fietsen naar werk werkt al voor je. Bescherm wat al werkt in plaats van een nieuw schema te starten.",
       "how": "Drie fietsdagen in de agenda. Regen? Wandel het eerste stuk. Geen extra sportschool-doel deze week.",
       "linked_factors": ["cycle_commute", "sports"]
     }
   ],
   "coaching": {
-    "template": "Sam, je hebt al een bewegingsgewoonte die voor je werkt. Korte- en lange-termijn risico zitten hier in het midden, met roken en alcohol als extra knoppen. Houd de fiets, en schuif die twee een stukje — dat is te doen."
+    "template": "Sam, je hebt al een bewegingsgewoonte die voor je werkt. Roken en alcohol kun je een stukje schuiven. Houd de fiets — dat is te doen."
   }
 }

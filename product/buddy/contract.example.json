@@ -101,7 +101,7 @@
       "theme": "sport",
       "title": "Bouw een wandelritme op",
       "summary": "Deze week na twee maaltijden tien minuten wandelen. Dezelfde schoenen, dezelfde straat — makkelijk vol te houden.",
-      "explanation": "Bij jou wegen BMI en weinig beweging het zwaarst, met taille als derde knop. Een vast Groninger rondje is de meest directe leefstijlstap: zelfde start, zelfde schoenen, geen sportschema.",
+      "explanation": "Bij jou wegen BMI en weinig beweging het zwaarst, samen met je taille. Een vast Groninger rondje is de meest directe stap: zelfde start, zelfde schoenen, geen sportschema.",
       "how": "Drie keer deze week: jas aan na het eten, Noorderplantsoen in, 25–45 minuten. Regendag? Alleen het parkrondje telt ook.",
       "linked_factors": ["sports", "bmi", "waist"]
     },
@@ -110,7 +110,7 @@
       "theme": "food",
       "title": "Rustige maaltijden, minder suikerdrank",
       "summary": "Houd je eettijden rustig en wissel één suikerdrankje per dag in voor water of ongezoete thee. Klein, niet streng.",
-      "explanation": "BMI en taille hangen in deze demo samen met wat je drinkt en hoe gehaast je eet. Geen dieet: één vaste wissel, dezelfde koffieafspraak.",
+      "explanation": "BMI en taille hangen samen met wat je drinkt en hoe gehaast je eet. Geen dieet: één vaste wissel, dezelfde koffieafspraak.",
       "how": "Kies één moment (middag of na het eten). Zet water of thee al klaar. Zeven dagen hetzelfde moment, dan pas iets nieuws.",
       "linked_factors": ["bmi", "waist"]
     },
@@ -118,13 +118,13 @@
       "id": "sleep-wind-down",
       "theme": "sleep",
       "title": "Een rustiger avondritueel",
-      "summary": "Kies een bedtijd en leg de telefoon 30 minuten eerder in een andere kamer. Slaap is een leefstijlknop, geen recept.",
-      "explanation": "Onregelmatige slaap staat bij jou als extra leefstijlknop naast gewicht en bewegen. Een vaste bedtijd maakt de dag kleiner, niet perfecter.",
+      "summary": "Kies een bedtijd en leg de telefoon 30 minuten eerder in een andere kamer. Slaap is geen recept.",
+      "explanation": "Onregelmatige slaap staat bij jou naast gewicht en bewegen. Een vaste bedtijd maakt de dag kleiner, niet perfecter.",
       "how": "Vijf avonden: telefoon de kamer uit, licht lager, één rustig ding (thee of een boek). Geen slaapbehandeling.",
       "linked_factors": ["sleep"]
     }
   ],
   "coaching": {
-    "template": "Pietje, in deze demo is het lange-termijn risico het cijfer om in de gaten te houden — informatie, geen vonnis. Gewicht, bewegen en slaap komen bij jou het sterkst naar voren. Begin met wandelingen die je volhoudt, geen perfect plan."
+    "template": "Pietje, gewicht, bewegen en slaap komen bij jou het sterkst naar voren. Begin met wandelingen die je volhoudt, geen perfect plan."
   }
 }

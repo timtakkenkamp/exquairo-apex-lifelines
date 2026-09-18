@@ -389,8 +389,8 @@ def advice_why(theme: str, factors: list[dict[str, Any]]) -> str:
         return "Bewegen dat je volhoudt, geen sportschema."
     if theme == "food":
         if "alcohol" in ids and "kcal" not in ids:
-            return "Wat je drinkt is een knop die je zelf zet."
-        return "Eten en suikerdrank zijn knoppen die je zelf zet."
+            return "Wat je drinkt, kun je zelf kiezen."
+        return "Eten en suikerdrank kun je zelf kiezen."
     return "Een rustiger avond, geen slaaprecept."
 
 
@@ -942,7 +942,7 @@ def template_reply(question: str, payload: dict[str, Any]) -> str:
         if any(n in q for n in needles):
             return (
                 f"{intervention['title']}: {intervention['summary']} "
-                "Dit is leefstijlcoaching, geen medisch advies."
+                "Dit is coaching, geen medisch advies."
             )
     coaching = (payload.get("coaching") or {}).get("template")
     if coaching:

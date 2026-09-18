@@ -23,7 +23,6 @@ from buddy_lib import (
     pct,
     persona_body,
     advice_sets,
-    advice_why,
     patient_can_influence,
     resolve_openai_api_key,
     risk_band_nl,
@@ -201,20 +200,17 @@ def render_advice_tile(factors: list[dict], item: dict, theme: str) -> None:
     meta = THEME_META.get(theme, {"label": "Stap"})
     colors = THEME_COLORS.get(theme, THEME_COLORS["sport"])
     blurb = item.get("summary") or item.get("explanation") or ""
-    bits = []
+    chips = []
     for factor in factors:
         label = factor_display_label(factor)
         shown = format_factor_value(factor)
-        bits.append(f"{label} {shown}".strip() if shown else label)
-    factor_line = " · ".join(bits)
-    why_line = advice_why(theme, factors)
+        chip = f"{label} {shown}".strip() if shown else label
+        chips.append(f'<span class="buddy-chip">{chip}</span>')
+    chips_html = f'<div class="buddy-chips buddy-tile-chips">{"".join(chips)}</div>' if chips else ""
     st.markdown(
         f"""
 <div class="buddy-tile" style="--buddy-tile-bar:{colors["bar"]};--buddy-tile-ink:{colors["ink"]};background:#fff;border:1px solid #d5e6f2;border-top:8px solid {colors["bar"]};border-radius:20px 20px 0 0;padding:16px 16px 14px;">
-  <div class="buddy-tile-factor" style="margin:0 0 12px;padding:0 0 10px;border-bottom:1px solid #e4eef6;">
-    <div class="buddy-tile-factor-label" style="font-weight:750;color:#1A4A6E;font-size:0.95rem;">{factor_line}</div>
-    <div class="buddy-tile-factor-why" style="color:#3d5a70;font-size:0.86rem;margin-top:3px;">{why_line}</div>
-  </div>
+  {chips_html}
   <div class="buddy-tile-kicker" style="font-size:0.75rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:{colors["ink"]};">{meta["label"]}</div>
   <div class="buddy-tile-title" style="font-size:1.15rem;font-weight:750;color:#1A4A6E;margin:8px 0 10px;">{item["title"]}</div>
   <div class="buddy-tile-blurb" style="color:#3d5a70;font-size:0.94rem;line-height:1.45;">{blurb}</div>
