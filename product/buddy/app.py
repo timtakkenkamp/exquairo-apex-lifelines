@@ -24,7 +24,6 @@ from buddy_lib import (
     persona_body,
     advice_sets,
     advice_why,
-    linked_factor_labels,
     patient_can_influence,
     resolve_openai_api_key,
     risk_band_nl,
@@ -113,6 +112,24 @@ def _mascot_data_uri() -> str:
         return ""
     encoded = base64.b64encode(MASCOT_FILE.read_bytes()).decode("ascii")
     return f"data:image/png;base64,{encoded}"
+
+
+def _go_home() -> None:
+    st.session_state.buddy_view = "home"
+    st.session_state.detail_theme = None
+    st.rerun()
+
+
+def render_audience_pills(personas_by_id: dict) -> None:
+    st.markdown('<div class="buddy-pills-flag" aria-hidden="true"></div>', unsafe_allow_html=True)
+    st.pills(
+        "Wie ben jij?",
+        options=list(personas_by_id),
+        format_func=lambda pid: personas_by_id[pid]["patient"]["display_name"],
+        key="audience_persona_pills",
+        label_visibility="collapsed",
+        on_change=_sync_audience_persona,
+    )
 
 
 def render_header(*, audience: bool = False) -> None:
@@ -221,54 +238,91 @@ def render_advice_tile(factors: list[dict], item: dict, theme: str) -> None:
         st.rerun()
 
 
-def render_detail_page(theme: str, patient_name: str, payload: dict) -> None:
-    page = get_intervention_page(theme)
-    colors = THEME_COLORS.get(theme, THEME_COLORS["sport"])
-    item = next(
-        (card for card in (payload.get("interventions") or []) if card.get("theme") == theme),
-        None,
-    )
-    if st.button("← Terug naar Boris", key="back_home"):
-        st.session_state.buddy_view = "home"
-        st.session_state.detail_theme = None
-        st.rerun()
-    render_header(audience=AUDIENCE)
-    st.caption(page["kicker"])
-    st.title(page["title"])
+def _advice_chips(theme: str, payload: dict) -> list[dict]:
+    """Factors from the matching advice set; body chips stay BMI / BRI / taille first."""
+    group: list[dict] = []
+    for factors, _item, set_theme in advice_sets(payload, limit=3):
+        if set_theme == theme:
+            group = list(factors)
+            break
+    if theme == "sport":
+        rank = {"bmi": 0, "bri": 1, "waist": 2, "weight": 3}
+        group.sort(key=lambda factor: rank.get(str(factor.get("id") or ""), 9))
+    return group
+
+
+def _step_card(kicker: str, title: str, body: str, steps: list[str] | None, colors: dict) -> None:
+    steps_html = ""
+    if steps:
+        items = "".join(f"<li>{step}</li>" for step in steps)
+        steps_html = f'<ol class="buddy-route">{items}</ol>'
+    title_html = f'<div class="buddy-step-title">{title}</div>' if title else ""
     st.markdown(
         f"""
-<div style="background:linear-gradient(180deg,{colors["soft"]},#fff 55%);border:1px solid #d5e6f2;border-left:8px solid {colors["bar"]};border-radius:20px;padding:16px 18px;margin:0 0 1rem 0;">
-  <div style="font-size:0.78rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:{colors["ink"]};margin-bottom:6px;">Boris voor {patient_name}</div>
-  <div style="color:#1A3348;font-size:1.05rem;line-height:1.5;">{page["coach"]}</div>
+<div class="buddy-step-card" style="--buddy-tile-bar:{colors["bar"]};--buddy-tile-ink:{colors["ink"]};">
+  <div class="buddy-step-kicker">{kicker}</div>
+  {title_html}
+  <div class="buddy-step-body">{body}</div>
+  {steps_html}
 </div>
 """,
         unsafe_allow_html=True,
     )
-    st.subheader("Waarom dit helpt")
-    st.write(page["why"])
-    if item and item.get("how"):
-        st.subheader("Hoe")
-        st.write(item["how"])
-    if item:
-        links = linked_factor_labels(item, payload)
-        if links:
-            st.caption("Past bij jou: " + ", ".join(links))
-    st.caption("Coaching, geen medicijn en geen triage.")
-    st.subheader(page["route_name"])
-    for i, step in enumerate(page.get("route_steps") or [], start=1):
-        st.markdown(f"**{i}.** {step}")
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown("**Wanneer**")
-        st.write(page["when"])
-    with c2:
-        st.markdown("**Hoe lang**")
-        st.write(page["duration"])
-    with c3:
-        st.markdown("**Hoe intens**")
-        st.write(page["intensity"])
-    if page.get("tip"):
-        st.info(page["tip"])
+
+
+def render_detail_page(
+    theme: str,
+    patient_name: str,
+    payload: dict,
+    personas_by_id: dict | None = None,
+) -> None:
+    page = get_intervention_page(theme)
+    colors = THEME_COLORS.get(theme, THEME_COLORS["sport"])
+    meta = THEME_META.get(theme, {"label": "Stap"})
+    if AUDIENCE:
+        render_header(audience=True)
+        if personas_by_id:
+            render_audience_pills(personas_by_id)
+    else:
+        render_header(audience=False)
+
+    st.markdown(
+        f'<div class="buddy-detail-flag buddy-detail--{theme}" style="--buddy-tile-bar:{colors["bar"]};--buddy-tile-ink:{colors["ink"]};"></div>',
+        unsafe_allow_html=True,
+    )
+    if st.button("← Terug naar de tegels", key="back_top"):
+        _go_home()
+
+    chips = []
+    for factor in _advice_chips(theme, payload):
+        label = factor_display_label(factor)
+        shown = format_factor_value(factor)
+        chip = f"{label} {shown}".strip() if shown else label
+        chips.append(f'<span class="buddy-chip">{chip}</span>')
+    chips_html = f'<div class="buddy-chips">{"".join(chips)}</div>' if chips else ""
+    st.markdown(
+        f"""
+<div class="buddy-detail-hero" style="--buddy-tile-bar:{colors["bar"]};--buddy-tile-ink:{colors["ink"]};border-top:8px solid {colors["bar"]};">
+  <div class="buddy-detail-kicker">{meta["label"]}</div>
+  <div class="buddy-detail-title">{page["title"]}</div>
+  <div class="buddy-detail-lead">{page["coach"]}</div>
+  {chips_html}
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+    left, mid, right = st.columns(3)
+    with left:
+        _step_card("Wanneer", "", page["when"], None, colors)
+    with mid:
+        _step_card("Hoe lang", "", page["duration"], None, colors)
+    with right:
+        _step_card("De route", page.get("route_name") or "", "", list(page.get("route_steps") or []), colors)
+
+    st.markdown('<p class="buddy-detail-foot">Coaching, geen recept.</p>', unsafe_allow_html=True)
+    if st.button("Terug naar de tegels", key="back_bottom", type="primary", use_container_width=True):
+        _go_home()
 
 
 def _nudge_waist_with_weight(old_weight: float, new_weight: float) -> None:
@@ -457,20 +511,13 @@ if st.session_state.get("buddy_view") == "detail":
         st.session_state.get("detail_theme") or "sport",
         patient["display_name"],
         payload,
+        personas_by_id=by_id,
     )
     st.stop()
 
 if AUDIENCE:
     render_header(audience=True)
-    st.markdown('<div class="buddy-pills-flag" aria-hidden="true"></div>', unsafe_allow_html=True)
-    st.pills(
-        "Wie ben jij?",
-        options=list(by_id),
-        format_func=lambda pid: by_id[pid]["patient"]["display_name"],
-        key="audience_persona_pills",
-        label_visibility="collapsed",
-        on_change=_sync_audience_persona,
-    )
+    render_audience_pills(by_id)
 else:
     render_header(audience=False)
 
