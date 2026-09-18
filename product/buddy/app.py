@@ -257,9 +257,10 @@ def _step_card(kicker: str, title: str, body: str, steps: list[str] | None, colo
         items = "".join(f"<li>{step}</li>" for step in steps)
         steps_html = f'<ol class="buddy-route">{items}</ol>'
     title_html = f'<div class="buddy-step-title">{title}</div>' if title else ""
+    wide = " buddy-step-card--wide" if steps else ""
     st.markdown(
         f"""
-<div class="buddy-step-card" style="--buddy-tile-bar:{colors["bar"]};--buddy-tile-ink:{colors["ink"]};">
+<div class="buddy-step-card{wide}" style="--buddy-tile-bar:{colors["bar"]};--buddy-tile-ink:{colors["ink"]};background:#fff;border:1px solid #d5e6f2;border-top:8px solid {colors["bar"]};border-radius:20px;padding:16px 16px 14px;">
   <div class="buddy-step-kicker">{kicker}</div>
   {title_html}
   <div class="buddy-step-body">{body}</div>
@@ -306,13 +307,12 @@ def render_detail_page(
         unsafe_allow_html=True,
     )
 
-    left, mid, right = st.columns(3)
-    with left:
+    when_col, long_col = st.columns(2)
+    with when_col:
         _step_card("Wanneer", "", page["when"], None, colors)
-    with mid:
+    with long_col:
         _step_card("Hoe lang", "", page["duration"], None, colors)
-    with right:
-        _step_card("De route", page.get("route_name") or "", "", list(page.get("route_steps") or []), colors)
+    _step_card("De route", page.get("route_name") or "", "", list(page.get("route_steps") or []), colors)
 
     st.markdown('<p class="buddy-detail-foot">Coaching, geen recept.</p>', unsafe_allow_html=True)
     if st.button("Terug naar de tegels", key="back_bottom", type="primary", use_container_width=True):
