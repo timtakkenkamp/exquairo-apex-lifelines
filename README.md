@@ -1,3 +1,7 @@
+> **Tim’s fork only:** mock electronic buddy lives in `product/buddy/`.  
+> Run: `uv sync` then `uv run streamlit run product/buddy/app.py`  
+> See `SANDBOX.md` — do not push this playground to the upstream repo.
+
 ### 1. Clone de repo
 In VS Code: `Ctrl+Shift+P` → "Git: Clone" → plak de repo-URL → kies een map.
 VS Code opent daarna het project.
