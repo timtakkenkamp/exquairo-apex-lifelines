@@ -332,8 +332,6 @@ def render_detail_page(
     route_title = page.get("route_name") or "" if theme == "sport" else ""
     _step_card(steps_kicker, route_title, "", list(page.get("route_steps") or []), colors)
 
-    if theme != "sport":
-        st.markdown('<p class="buddy-detail-foot">Coaching, geen recept.</p>', unsafe_allow_html=True)
     if st.button("Terug naar de tegels", key="back_home", type="primary", use_container_width=True):
         _go_home()
 
