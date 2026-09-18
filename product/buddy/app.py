@@ -530,7 +530,7 @@ for col, (factor, item) in zip(row, pairs):
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown('<div class="buddy-chat-section">', unsafe_allow_html=True)
-st.markdown('<div class="buddy-chat-title">Vraag het Boris</div>', unsafe_allow_html=True)
+st.markdown('<div class="buddy-chat-title">Vraag het aan Boris</div>', unsafe_allow_html=True)
 if "chat" not in st.session_state or st.session_state.get("chat_persona") != persona_id:
     st.session_state.chat = []
     st.session_state.chat_persona = persona_id
