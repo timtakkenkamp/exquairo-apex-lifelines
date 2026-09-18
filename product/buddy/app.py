@@ -409,6 +409,8 @@ def _keep_whatif_sliders() -> None:
 
 def _reseed_whatif_sliders() -> None:
     for key in _WHATIF_SLIDER_KEYS:
+        if key in st.session_state:
+            continue
         kept = st.session_state.get(f"_keep_{key}")
         if kept is not None:
             st.session_state[key] = kept
@@ -437,7 +439,6 @@ def apply_persona_state(persona_id: str, baseline: dict) -> None:
         _reseed_whatif_sliders()
         for key, value in defaults.items():
             st.session_state.setdefault(key, value)
-        _keep_whatif_sliders()
     if persona_changed:
         st.session_state.chat = []
         st.session_state.chat_persona = persona_id
@@ -585,6 +586,7 @@ with st.container(border=True):
         if st.button("Reset"):
             st.session_state.whatif_reset = True
             st.rerun()
+_keep_whatif_sliders()
 
 payload = payload_from_whatif(baseline, use_live)
 patient = payload["patient"]
