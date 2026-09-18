@@ -249,6 +249,7 @@ class SimplifyTests(unittest.TestCase):
         self.assertNotIn("2. Voor jou", app)
         self.assertNotIn("3. Vraag het Boris", app)
         self.assertNotIn("4. Vraag het Boris", app)
+        self.assertIn('buddy-chat-title">Vraag het Boris', app)
         self.assertNotIn('st.expander("Vraag het Boris"', app)
         self.assertIn('st.expander("System prompt (demo)"', app)
         self.assertIn("CHAT_PLACEHOLDER", app)
@@ -561,6 +562,11 @@ class SystemPromptTests(unittest.TestCase):
         self.assertNotIn("Nu 94.5 kg", blob_after)
         self.assertIn("buddy-tile-factor", blob_after)
         self.assertIn("verhoogt je risico", blob_after)
+        self.assertIn("Vraag het Boris", blob_after)
+        self.assertNotIn("3. Vraag het Boris", blob_after)
+        self.assertNotIn("1. Je risico", blob_after)
+        self.assertNotIn("2. Voor jou", blob_after)
+        self.assertNotIn("Kreatinine", blob_after)
         self.assertNotIn('class="buddy-factor"', blob_after)
         tile_ctas = [
             b.label

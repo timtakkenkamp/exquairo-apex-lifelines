@@ -25,6 +25,7 @@ from buddy_lib import (
     persona_body,
     factor_action_pairs,
     linked_factor_labels,
+    patient_can_influence,
     resolve_openai_api_key,
     risk_band_nl,
     validate_payload,
@@ -176,7 +177,11 @@ def format_factor_value(factor: dict) -> str:
 
 
 def render_factor_action_tile(factor: dict, item: dict) -> None:
-    """One column card: this person's factor + the matching action + CTA."""
+    """One column card: this person's factor + the matching action + CTA.
+
+    Factor copy uses inline styles so Streamlit cannot strip it and leave
+    an action-only card (or a loose lab leftover).
+    """
     theme = item.get("theme") or "sport"
     meta = THEME_META.get(theme, {"label": "Stap"})
     colors = THEME_COLORS.get(theme, THEME_COLORS["sport"])
@@ -184,16 +189,17 @@ def render_factor_action_tile(factor: dict, item: dict) -> None:
     shown = format_factor_value(factor)
     why = factor_direction_nl(str(factor.get("direction") or ""))
     why_line = f"{shown} · {why}" if shown else why
+    label = factor_display_label(factor)
     st.markdown(
         f"""
-<div class="buddy-tile" style="--buddy-tile-bar:{colors["bar"]};--buddy-tile-ink:{colors["ink"]};">
-  <div class="buddy-tile-factor">
-    <div class="buddy-tile-factor-label">{factor_display_label(factor)}</div>
-    <div class="buddy-tile-factor-why">{why_line}</div>
+<div class="buddy-tile" style="--buddy-tile-bar:{colors["bar"]};--buddy-tile-ink:{colors["ink"]};background:#fff;border:1px solid #d5e6f2;border-top:8px solid {colors["bar"]};border-radius:20px 20px 0 0;padding:16px 16px 14px;">
+  <div class="buddy-tile-factor" style="margin:0 0 12px;padding:0 0 10px;border-bottom:1px solid #e4eef6;">
+    <div class="buddy-tile-factor-label" style="font-weight:750;color:#1A4A6E;font-size:0.95rem;">{label}</div>
+    <div class="buddy-tile-factor-why" style="color:#3d5a70;font-size:0.86rem;margin-top:3px;">{why_line}</div>
   </div>
-  <div class="buddy-tile-kicker">{meta["label"]}</div>
-  <div class="buddy-tile-title">{item["title"]}</div>
-  <div class="buddy-tile-blurb">{blurb}</div>
+  <div class="buddy-tile-kicker" style="font-size:0.75rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:{colors["ink"]};">{meta["label"]}</div>
+  <div class="buddy-tile-title" style="font-size:1.15rem;font-weight:750;color:#1A4A6E;margin:8px 0 10px;">{item["title"]}</div>
+  <div class="buddy-tile-blurb" style="color:#3d5a70;font-size:0.94rem;line-height:1.45;">{blurb}</div>
 </div>
 """,
         unsafe_allow_html=True,
@@ -499,8 +505,24 @@ with st.container(border=True):
 
 payload = payload_from_whatif(baseline, use_live)
 patient = payload["patient"]
+# Labs/meds may still sit on the live payload; never let them become their own card.
+kept_factors = []
+seen_ids: set[str] = set()
+for factor in list(payload.get("top_factors") or []) + list(payload.get("persona_factors") or []):
+    if not patient_can_influence(factor):
+        continue
+    fid = str(factor.get("id") or "")
+    if not fid or fid in seen_ids:
+        continue
+    seen_ids.add(fid)
+    kept_factors.append(factor)
+payload["top_factors"] = kept_factors
 st.markdown('<div class="buddy-voorjou-section buddy-tiles-flag">', unsafe_allow_html=True)
-pairs = factor_action_pairs(payload, limit=3)
+pairs = [
+    (factor, item)
+    for factor, item in factor_action_pairs(payload, limit=3)
+    if patient_can_influence(factor)
+]
 row = st.columns(3)
 for col, (factor, item) in zip(row, pairs):
     with col:
@@ -508,6 +530,7 @@ for col, (factor, item) in zip(row, pairs):
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown('<div class="buddy-chat-section">', unsafe_allow_html=True)
+st.markdown('<div class="buddy-chat-title">Vraag het Boris</div>', unsafe_allow_html=True)
 if "chat" not in st.session_state or st.session_state.get("chat_persona") != persona_id:
     st.session_state.chat = []
     st.session_state.chat_persona = persona_id
