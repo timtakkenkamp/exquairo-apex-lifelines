@@ -49,6 +49,36 @@ class FixtureTests(unittest.TestCase):
         river = next(p for p in personas if p["patient"]["persona_id"] == "persona-river")
         self.assertEqual(river["patient"]["display_name"], "Pietje")
 
+    def test_voor_jou_hides_hba1c_and_keeps_next_factors(self):
+        river = next(p for p in load_personas() if p["patient"]["persona_id"] == "persona-river")
+        bloated = {
+            **river,
+            "top_factors": [
+                {
+                    "id": "hbac",
+                    "label": "HbA1c",
+                    "direction": "increases_risk",
+                    "importance": 0.9,
+                    "patient_value": "6.2",
+                    "unit": "%",
+                },
+                *river["top_factors"],
+            ],
+        }
+        shown = top_local_factors(bloated, 3)
+        self.assertTrue(shown)
+        self.assertFalse(any(f["id"] == "hbac" for f in shown))
+        self.assertFalse(any("hba1c" in str(f.get("label") or "").lower() for f in shown))
+
+    def test_bri_roundtrip_from_waist(self):
+        from model_adapter import body_roundness_index, waist_cm_from_bri
+
+        waist = 106.0
+        height = 174.0
+        bri = body_roundness_index(waist, height)
+        back = waist_cm_from_bri(bri, height)
+        self.assertAlmostEqual(back, waist, places=1)
+
     def test_local_factors_differ_across_personas(self):
         by_id = {p["patient"]["persona_id"]: p for p in load_personas()}
         river_top = by_id["persona-river"]["top_factors"][0]["id"]
@@ -203,7 +233,8 @@ class SimplifyTests(unittest.TestCase):
         self.assertIsNotNone(primary)
         self.assertEqual(primary["theme"], "sport")
         app = (EXAMPLE_CONTRACT.parent / "app.py").read_text(encoding="utf-8")
-        self.assertIn("4. Vraag het Boris", app)
+        self.assertIn("3. Vraag het Boris", app)
+        self.assertNotIn("4. Vraag het Boris", app)
         self.assertNotIn('st.expander("Vraag het Boris"', app)
         self.assertIn('st.expander("System prompt (demo)"', app)
         self.assertIn("CHAT_PLACEHOLDER", app)
@@ -228,8 +259,14 @@ class SimplifyTests(unittest.TestCase):
         self.assertIn("Slaap (uur per nacht)", app)
         self.assertIn("Suikerdranken per week", app)
         self.assertIn("whatif_reset", app)
-        self.assertIn("whatif_bmi", app)
-        self.assertIn("_sync_bmi_to_weight", app)
+        self.assertIn("whatif_bri", app)
+        self.assertIn("_sync_bri_to_waist", app)
+        self.assertNotIn("whatif_bmi", app)
+        self.assertIn("2. Voor jou", app)
+        self.assertNotIn("2. Waarom jij", app)
+        self.assertNotIn("Lange termijn", app)
+        self.assertNotIn('Nu {whatif', app)
+        self.assertIn("over 5 jaar", app)
         self.assertNotIn("st.number_input", app)
         self.assertNotIn('"Lengte"', app)
         self.assertNotIn("Lengte (cm)", app)
@@ -237,7 +274,7 @@ class SimplifyTests(unittest.TestCase):
         self.assertIn("align-items: stretch", css)
         self.assertIn("buddy-tile-blurb", css)
         self.assertIn(".buddy-hero", css)
-        self.assertIn("Shared lever chrome so BMI matches", css)
+        self.assertIn("Shared lever chrome so BRI matches", css)
         self.assertIn("Kleine stappen. Grote impact.", app)
         self.assertIn("buddy-audience-flag", app)
 
@@ -407,7 +444,10 @@ class SystemPromptTests(unittest.TestCase):
         self.assertIn("Pietje", context)
         self.assertIn("persona-river", context)
         self.assertIn("48%", context)
-        self.assertIn("67%", context)
+        self.assertIn("5 jaar", context)
+        self.assertNotIn("67%", context)
+        self.assertIn("BRI", context)
+        self.assertNotIn("Lange termijn", context)
         rendered = render_system_prompt(river)
         self.assertIn("Pietje", rendered)
         self.assertNotIn(SESSIE_CONTEXT_TOKEN, rendered)
@@ -437,8 +477,10 @@ class SystemPromptTests(unittest.TestCase):
         self.assertFalse(any("Live model" in t.label for t in demo.toggle))
         self.assertFalse(any(t.label == "System prompt" for t in demo.text_area))
         self.assertFalse(any("OpenAI API key" in (i.label or "") for i in demo.text_input))
-        self.assertIn("Hoi Pietje", [t.value for t in demo.title])
-        self.assertIn("4. Vraag het Boris", [s.value for s in demo.subheader])
+        self.assertNotIn("Hoi Pietje", [t.value for t in demo.title])
+        self.assertIn("3. Vraag het Boris", [s.value for s in demo.subheader])
+        self.assertIn("2. Voor jou", [s.value for s in demo.subheader])
+        self.assertNotIn("4. Vraag het Boris", [s.value for s in demo.subheader])
         self.assertTrue(len(demo.pills) >= 1)
         blob = " ".join(str(m.value) for m in demo.markdown)
         self.assertIn("Kleine stappen. Grote impact.", blob)
@@ -446,7 +488,8 @@ class SystemPromptTests(unittest.TestCase):
         self.assertNotIn("<strong>Hoe:</strong>", blob)
         slider_labels = [s.label for s in demo.slider]
         self.assertIn("Gewicht (kg)", slider_labels)
-        self.assertIn("BMI", slider_labels)
+        self.assertIn("BRI", slider_labels)
+        self.assertNotIn("BMI", slider_labels)
         self.assertIn("Taille (cm)", slider_labels)
         self.assertIn("Beweegminuten per week", slider_labels)
         self.assertIn("Slaap (uur per nacht)", slider_labels)
@@ -463,12 +506,12 @@ class SystemPromptTests(unittest.TestCase):
                 slider.set_value(120.0)
             elif slider.label == "Slaap (uur per nacht)":
                 slider.set_value(8.0)
-            elif slider.label == "BMI":
-                slider.set_value(28.0)
+            elif slider.label == "BRI":
+                slider.set_value(7.0)
         demo.run()
         moved = {s.label: s.value for s in demo.slider}
         self.assertEqual(moved["Beweegminuten per week"], 200)
-        self.assertEqual(moved["BMI"], 28.0)
+        self.assertAlmostEqual(float(moved["BRI"]), 7.0, places=1)
         reset = next(b for b in demo.button if b.label == "Reset")
         reset.click().run()
         restored = {s.label: s.value for s in demo.slider}
@@ -476,8 +519,14 @@ class SystemPromptTests(unittest.TestCase):
         self.assertEqual(restored["Suikerdranken per week"], 7)
         self.assertEqual(restored["Taille (cm)"], 106)
         self.assertEqual(restored["Slaap (uur per nacht)"], 5.5)
-        self.assertAlmostEqual(float(restored["BMI"]), 31.2, places=1)
-        self.assertIn("Hoi Pietje", [t.value for t in demo.title])
+        self.assertAlmostEqual(float(restored["BRI"]), 5.64, places=2)
+        blob_after = " ".join(str(m.value) for m in demo.markdown)
+        self.assertIn("over 5 jaar", blob_after)
+        self.assertNotIn("Lange termijn", blob_after)
+        self.assertNotIn("HbA1c", blob_after)
+        self.assertNotIn("Nu 94.5 kg", blob_after)
+        self.assertTrue(any(s.value == "1. Je risico" for s in demo.subheader))
+        self.assertFalse(any("Lange" in (s.value or "") for s in demo.subheader))
 
     def test_zaal_chat_replies_for_every_persona(self):
         from streamlit.testing.v1 import AppTest
@@ -496,8 +545,8 @@ class SystemPromptTests(unittest.TestCase):
             demo.pills[0].set_value(pid)
             demo.run()
             self.assertFalse(demo.exception, msg=f"{name} page crashed")
-            self.assertIn(f"Hoi {name}", [t.value for t in demo.title])
             self.assertEqual(demo.session_state.get("audience_persona"), pid)
+            self.assertEqual(demo.pills[0].value, pid)
 
             box = next(i for i in demo.text_input if i.label == "Je vraag")
             box.set_value("Hoe kan ik meer wandelen?")

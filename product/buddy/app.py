@@ -16,7 +16,6 @@ from buddy_lib import (
     apply_lifestyle_overlay,
     apply_weight_whatif,
     clip,
-    factor_direction_nl,
     factor_display_label,
     load_default_system_prompt,
     load_personas,
@@ -32,6 +31,7 @@ from buddy_lib import (
 )
 from intervention_pages import get_intervention_page
 from live_model import models_available, overlay_live_predictions
+from model_adapter import body_roundness_index, waist_cm_from_bri
 
 PERSONA_ORDER = ["persona-river", "persona-sam", "persona-noor"]
 ASSETS = Path(__file__).resolve().parent / "assets"
@@ -120,18 +120,12 @@ def render_header(*, audience: bool = False) -> None:
         face = f'<img class="buddy-hero-face" src="{uri}" alt="Boris" />'
     else:
         face = '<div class="buddy-hero-face buddy-hero-fallback" aria-hidden="true"></div>'
-    kicker = (
-        '<div class="buddy-hero-kicker">Boris</div>'
-        if audience
-        else '<div class="buddy-hero-kicker">Met Boris</div>'
-    )
     band = "buddy-hero buddy-hero--zaal" if audience else "buddy-hero"
     st.markdown(
         f"""
 <div class="{band}">
   <div class="buddy-hero-mark">{face}</div>
   <div class="buddy-hero-copy">
-    {kicker}
     <div class="buddy-hero-line">Kleine stappen. Grote impact.</div>
   </div>
 </div>
@@ -140,7 +134,7 @@ def render_header(*, audience: bool = False) -> None:
     )
 
 
-def render_risk(risk: dict, short_title: str) -> None:
+def render_risk(risk: dict, short_title: str, subtitle: str = "over 5 jaar") -> None:
     label = risk["risk_label"]
     colors = RISK_COLORS[label]
     score_pct = pct(risk["risk_score"])
@@ -149,7 +143,7 @@ def render_risk(risk: dict, short_title: str) -> None:
         f"""
 <div style="background:#fff;border:1px solid #d5e6f2;border-radius:24px;padding:22px 20px 18px;box-shadow:0 10px 28px rgba(26,74,110,0.06);">
   <div style="font-weight:750;font-size:1.15rem;color:#1A4A6E;">{short_title}</div>
-  <div style="color:#5A7A90;font-size:0.92rem;margin:2px 0 8px;">risico op diabetes</div>
+  <div style="color:#5A7A90;font-size:0.92rem;margin:2px 0 8px;">{subtitle}</div>
   <div style="font-size:3.4rem;font-weight:800;letter-spacing:-0.04em;line-height:1;color:{colors["ink"]};">{score_pct}</div>
   <span style="display:inline-block;margin-top:10px;border-radius:999px;padding:3px 10px;font-size:0.75rem;font-weight:700;text-transform:uppercase;background:{colors["badge_bg"]};color:{colors["badge_ink"]};">{risk_band_nl(label)}</span>
   <div style="margin-top:14px;height:8px;background:#e4eef6;border-radius:999px;overflow:hidden;">
@@ -171,8 +165,9 @@ def format_factor_value(factor: dict) -> str:
         number = float(raw)
     except (TypeError, ValueError):
         return f"{raw} {unit}".strip()
-    if not unit and (abs(number - 0.0) < 1e-9 or abs(number - 1.0) < 1e-9):
-        return "Ja" if abs(number - 1.0) < 1e-9 else "Nee"
+    if abs(number - 0.0) < 1e-9 or abs(number - 1.0) < 1e-9:
+        if not unit or unit.lower() in {"flag", "ja/nee", "0/1"}:
+            return "Ja" if abs(number - 1.0) < 1e-9 else "Nee"
     if number == int(number):
         pretty = str(int(number))
     else:
@@ -181,26 +176,15 @@ def format_factor_value(factor: dict) -> str:
 
 
 def render_factor(factor: dict) -> None:
-    up = factor["direction"] == "increases_risk"
-    verb = factor_direction_nl(factor["direction"])
-    color = "#C45B4A" if up else "#2F8A4A"
-    soft = "#E7A08C" if up else "#7ED957"
-    width = max(8, round(float(factor.get("share") or 0) * 100))
     shown = format_factor_value(factor)
     value_html = (
         f'<div style="color:#5A7A90;font-size:0.88rem;">{shown}</div>' if shown else ""
     )
     st.markdown(
         f"""
-<div class="buddy-factor" style="background:#fff;border:1px solid #d5e6f2;border-radius:18px;padding:12px 14px 14px;margin-bottom:8px;">
-  <div>
-    <div style="font-weight:700;color:#1A4A6E;">{factor_display_label(factor)}</div>
-    {value_html}
-    <div style="margin-top:4px;font-size:0.9rem;font-weight:650;color:{color};">{verb}</div>
-  </div>
-  <div style="margin-top:8px;height:10px;background:#e4eef6;border-radius:999px;overflow:hidden;">
-    <div style="width:{width}%;height:10px;background:linear-gradient(90deg,{soft},{color});border-radius:999px;"></div>
-  </div>
+<div class="buddy-factor" style="background:#fff;border:1px solid #d5e6f2;border-radius:18px;padding:14px 16px;margin-bottom:8px;">
+  <div style="font-weight:700;color:#1A4A6E;">{factor_display_label(factor)}</div>
+  {value_html}
 </div>
 """,
         unsafe_allow_html=True,
@@ -294,24 +278,36 @@ def _nudge_waist_with_weight(old_weight: float, new_weight: float) -> None:
     st.session_state.whatif_waist = round(clip(waist + WAIST_CM_PER_KG * delta, 60.0, 140.0), 0)
 
 
-def _sync_weight_to_bmi() -> None:
-    """Keep the BMI slider in lockstep when gewicht moves; taille follows 0.7 cm/kg."""
-    height_m = float(st.session_state.get("whatif_height_cm") or 170) / 100.0
+def _current_height_cm() -> float:
+    return float(st.session_state.get("whatif_height_cm") or 170)
+
+
+def _sync_bri_from_waist() -> None:
+    height_cm = _current_height_cm()
+    waist = float(st.session_state.get("whatif_waist") or 80)
+    st.session_state.whatif_bri = round(clip(body_roundness_index(waist, height_cm), 1.0, 12.0), 2)
+
+
+def _sync_weight_to_shape() -> None:
+    """Gewicht nudges taille (0.7 cm/kg); BRI follows taille + height."""
     new_weight = float(st.session_state.whatif_weight)
     old_weight = float(st.session_state.get("_whatif_weight_for_waist") or new_weight)
-    st.session_state.whatif_bmi = round(new_weight / (height_m**2), 1)
     _nudge_waist_with_weight(old_weight, new_weight)
     st.session_state._whatif_weight_for_waist = new_weight
+    _sync_bri_from_waist()
 
 
-def _sync_bmi_to_weight() -> None:
-    """BMI is a patient lever too — same slider chrome as taille / beweeg / slaap."""
-    height_m = float(st.session_state.get("whatif_height_cm") or 170) / 100.0
-    new_weight = round(float(st.session_state.whatif_bmi) * (height_m**2), 1)
-    old_weight = float(st.session_state.get("_whatif_weight_for_waist") or new_weight)
-    st.session_state.whatif_weight = new_weight
-    _nudge_waist_with_weight(old_weight, new_weight)
-    st.session_state._whatif_weight_for_waist = new_weight
+def _sync_waist_to_bri() -> None:
+    _sync_bri_from_waist()
+
+
+def _sync_bri_to_waist() -> None:
+    """BRI is derived from taille + lengte; moving BRI edits taille only."""
+    height_cm = _current_height_cm()
+    bri = float(st.session_state.whatif_bri)
+    waist = clip(waist_cm_from_bri(bri, height_cm), 60.0, 140.0)
+    st.session_state.whatif_waist = round(waist, 0)
+    st.session_state.whatif_bri = round(clip(body_roundness_index(waist, height_cm), 1.0, 12.0), 2)
 
 
 def _secrets_openai_key() -> str:
@@ -338,8 +334,8 @@ def apply_persona_state(persona_id: str, baseline: dict) -> None:
     st.session_state.whatif_height_cm = body["height_cm"]
     defaults = {
         "whatif_weight": round(body["weight_kg"], 1),
-        "whatif_bmi": round(body["bmi"], 1),
         "whatif_waist": round(body["waist_cm"], 0),
+        "whatif_bri": round(body["bri"], 2),
         "whatif_move": int(round(body["move_min_week"])),
         "whatif_sleep": round(body["sleep_hours"], 1),
         "whatif_drinks": int(round(body["sugary_drinks_week"])),
@@ -407,7 +403,7 @@ else:
         use_live = st.toggle(
             "Live model (final A/B)",
             value=use_live_default,
-            help="Aan: final model A (elastic-net) en B (XGBoost). Uit: mock fixtures.",
+            help="Aan: final model A (elastic-net, 5 jaar). Model B blijft in de repo, niet in beeld. Uit: mock fixtures.",
             disabled=not use_live_default,
         )
         st.caption("Small steps. Big impact.")
@@ -467,7 +463,6 @@ if st.session_state.get("buddy_view") == "detail":
     st.stop()
 
 render_header(audience=AUDIENCE)
-st.title(f"Hoi {patient['display_name']}")
 if AUDIENCE:
     st.markdown('<div class="buddy-pills-flag" aria-hidden="true"></div>', unsafe_allow_html=True)
     st.pills(
@@ -479,7 +474,8 @@ if AUDIENCE:
         on_change=_sync_audience_persona,
     )
 
-# 1) Risico — slider first so the two big numbers stay live
+# 1) Risico — one 5-year number; sliders sit in one what-if card
+st.markdown('<div class="buddy-section buddy-risk-section">', unsafe_allow_html=True)
 st.subheader("1. Je risico")
 st.markdown('<div class="buddy-whatif-flag" aria-hidden="true"></div>', unsafe_allow_html=True)
 with st.container(border=True):
@@ -492,18 +488,18 @@ with st.container(border=True):
             140.0,
             step=0.5,
             key="whatif_weight",
-            on_change=_sync_weight_to_bmi,
+            on_change=_sync_weight_to_shape,
         )
     with bcol:
         st.slider(
-            "BMI",
-            16.0,
-            50.0,
+            "BRI",
+            1.0,
+            12.0,
             step=0.1,
-            format="%.1f",
-            key="whatif_bmi",
-            on_change=_sync_bmi_to_weight,
-            help="Volgt uit gewicht; zelf ook te schuiven. Lengte blijft vast.",
+            format="%.2f",
+            key="whatif_bri",
+            on_change=_sync_bri_to_waist,
+            help="Body roundness uit taille en lengte. Lengte blijft vast.",
         )
     with rcol:
         if st.button("Reset", use_container_width=True):
@@ -517,6 +513,7 @@ with st.container(border=True):
             140.0,
             step=1.0,
             key="whatif_waist",
+            on_change=_sync_waist_to_bri,
             help="Middelomtrek — zelf meetbaar.",
         )
     with mcol:
@@ -549,30 +546,15 @@ with st.container(border=True):
 
 payload = payload_from_whatif(baseline, use_live)
 patient = payload["patient"]
-whatif = payload.get("whatif") or {}
-if whatif.get("active"):
-    st.caption(
-        f"Nu {whatif['weight_kg']:.1f} kg · BMI {whatif['bmi']:.1f} · "
-        f"taille {float(whatif.get('waist_cm') or 0):.0f} cm · "
-        f"{float(whatif.get('move_min_week') or 0):.0f} min · "
-        f"{float(whatif.get('sleep_hours') or 0):.1f} uur slaap · "
-        f"{float(whatif.get('sugary_drinks_week') or 0):.0f} suikerdranken."
-    )
-
-c1, c2 = st.columns(2)
 risks = {r["id"]: r for r in payload["risks"]}
-with c1:
-    render_risk(risks["t1_t2"], "Korte termijn")
-with c2:
-    render_risk(risks["t1_t3"], "Lange termijn")
+render_risk(risks["t1_t2"], "Risico op diabetes", "over 5 jaar")
+st.markdown("</div>", unsafe_allow_html=True)
 
-# 2) Waarom jij — max 3
-st.subheader("2. Waarom jij")
+# 2) Voor jou — factors (no HbA1c) then interventions
+st.markdown('<div class="buddy-section buddy-voorjou-section">', unsafe_allow_html=True)
+st.subheader("2. Voor jou")
 for factor in top_local_factors(payload, limit=3):
     render_factor(factor)
-
-# 3) Doe dit — three tiles, ordered by this person's strongest factors
-st.subheader("3. Doe dit")
 st.markdown('<div class="buddy-tiles-flag" aria-hidden="true"></div>', unsafe_allow_html=True)
 cards = interventions_for_local_factors(payload, limit=3)
 if cards:
@@ -580,9 +562,11 @@ if cards:
     for col, item in zip(cols, cards):
         with col:
             render_intervention_tile(item, payload)
+st.markdown("</div>", unsafe_allow_html=True)
 
-# 4) Chat — always visible
-st.subheader("4. Vraag het Boris")
+# 3) Chat — always visible, with room so it is not an appendix
+st.markdown('<div class="buddy-section buddy-chat-section">', unsafe_allow_html=True)
+st.subheader("3. Vraag het Boris")
 if "chat" not in st.session_state or st.session_state.get("chat_persona") != persona_id:
     st.session_state.chat = []
     st.session_state.chat_persona = persona_id
@@ -612,3 +596,4 @@ if asked:
 for q, reply, _source in st.session_state.chat:
     st.chat_message("user").write(q)
     st.chat_message("assistant").write(reply)
+st.markdown("</div>", unsafe_allow_html=True)

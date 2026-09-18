@@ -40,6 +40,7 @@ ACTIONABLE_THEME = {
     "sports": "sport",
     "cycle_commute": "sport",
     "bmi": "sport",
+    "bri": "sport",
     "waist": "sport",
     "weight": "sport",
     "kcal": "food",
@@ -55,8 +56,11 @@ ACTIONABLE_THEME = {
 
 FACTOR_LABEL_NL = {
     "bmi": "BMI",
+    "bri": "BRI",
     "weight": "Gewicht",
     "waist": "Tailleomvang",
+    "hbac": "HbA1c",
+    "hba1c": "HbA1c",
     "sports": "Sport / beweging",
     "family_t2dm": "Familiegeschiedenis type 2 diabetes",
     "sleep": "Slaap",
@@ -69,8 +73,8 @@ FACTOR_LABEL_NL = {
 # Patient-facing titles. Internal ids stay t1_t2 / t1_t3 (HbA1c > 6.5% mock proxy).
 PATIENT_RISK_COPY = {
     "t1_t2": {
-        "title": "Korte-termijn risico op diabetes",
-        "subtitle": "Demo-proxy: kans dat HbA1c boven 6,5% uitkomt. Geen diagnose.",
+        "title": "Risico op diabetes over 5 jaar",
+        "subtitle": "Korte-termijn uitkomst (model A). Geen diagnose.",
     },
     "t1_t3": {
         "title": "Lange-termijn risico op diabetes",
@@ -224,9 +228,26 @@ def risk_band_nl(label: str) -> str:
     return RISK_BAND_NL.get(label, label)
 
 
+_HIDDEN_PATIENT_FACTOR_IDS = {"hbac", "hba1c", "hbac_t1", "hba1c_t1"}
+
+
+def _is_hidden_patient_factor(factor: dict[str, Any]) -> bool:
+    """HbA1c may drive the model; patients do not see it as a Voor-jou factor."""
+    fid = str(factor.get("id") or "").lower()
+    label = str(factor.get("label") or "").lower()
+    if fid in _HIDDEN_PATIENT_FACTOR_IDS:
+        return True
+    return "hba1c" in fid or "hbac" in fid or "hba1c" in label or "hbac" in label
+
+
 def top_local_factors(payload: dict[str, Any], limit: int = 3) -> list[dict[str, Any]]:
-    """Patient-facing 'Waarom jij': at most `limit` local factors."""
-    return factor_share(payload.get("top_factors") or [])[:limit]
+    """Patient-facing 'Voor jou': at most `limit` local factors, never HbA1c."""
+    visible = [
+        factor
+        for factor in factor_share(payload.get("top_factors") or [])
+        if not _is_hidden_patient_factor(factor)
+    ]
+    return visible[:limit]
 
 
 def pick_primary_intervention(payload: dict[str, Any]) -> dict[str, Any] | None:
@@ -367,11 +388,15 @@ def persona_body(payload: dict[str, Any]) -> dict[str, float]:
         or _as_float(snap.get("sugary_drinks_week"))
         or DEFAULT_SUGARY_DRINKS_WEEK
     )
+    from model_adapter import body_roundness_index
+
+    waist_cm = float(waist_cm)
     return {
         "height_cm": height_cm,
         "weight_kg": weight_kg,
         "bmi": bmi,
-        "waist_cm": float(waist_cm),
+        "waist_cm": waist_cm,
+        "bri": round(body_roundness_index(waist_cm, height_cm), 2),
         "move_min_week": float(move_min),
         "sleep_hours": float(sleep_hours),
         "sugary_drinks_week": float(drinks),
@@ -617,9 +642,12 @@ def apply_weight_whatif(
     patient["move_min_week"] = round(new_move, 0)
     patient["sleep_hours"] = round(new_sleep, 1)
     patient["sugary_drinks_week"] = round(new_drinks, 0)
+    from model_adapter import body_roundness_index
+
     updated["whatif"] = {
         "weight_kg": round(new_weight, 1),
         "bmi": round(new_bmi, 1),
+        "bri": round(body_roundness_index(new_waist, body["height_cm"]), 2),
         "height_cm": body["height_cm"],
         "waist_cm": round(new_waist, 0),
         "move_min_week": round(new_move, 0),
@@ -782,7 +810,6 @@ def build_session_context(payload: dict[str, Any]) -> str:
     source = payload.get("source") or "mock"
     risks = {r.get("id"): r for r in payload.get("risks") or []}
     short = risks.get("t1_t2") or {}
-    longr = risks.get("t1_t3") or {}
     factor_lines = [
         f"- {factor_display_label(factor)}: {factor_direction_nl(factor.get('direction'))}"
         for factor in top_local_factors(payload, 3)
@@ -794,17 +821,18 @@ def build_session_context(payload: dict[str, Any]) -> str:
     whatif = payload.get("whatif") or {}
     body = persona_body(payload)
     weight = whatif.get("weight_kg", patient.get("weight_kg", body["weight_kg"]))
-    bmi = whatif.get("bmi", patient.get("bmi", body["bmi"]))
     waist = whatif.get("waist_cm", patient.get("waist_cm", body["waist_cm"]))
+    bri = whatif.get("bri", body.get("bri"))
     move = whatif.get("move_min_week", patient.get("move_min_week", body["move_min_week"]))
     sleep = whatif.get("sleep_hours", patient.get("sleep_hours", body["sleep_hours"]))
     drinks = whatif.get(
         "sugary_drinks_week",
         patient.get("sugary_drinks_week", body["sugary_drinks_week"]),
     )
-    if weight is not None and bmi is not None:
+    if weight is not None and waist is not None:
+        bri_txt = f"{float(bri):.2f}" if bri is not None else "—"
         whatif_line = (
-            f"What-if: {float(weight):.1f} kg · BMI {float(bmi):.1f} · "
+            f"What-if: {float(weight):.1f} kg · BRI {bri_txt} · "
             f"taille {float(waist):.0f} cm · {float(move):.0f} min/week · "
             f"{float(sleep):.1f} uur slaap · {float(drinks):.0f} suikerdranken/week"
         )
@@ -815,11 +843,9 @@ def build_session_context(payload: dict[str, Any]) -> str:
         [
             f"Persona: {name} ({persona_id})",
             f"Bron: {source}",
-            f"Korte termijn: {pct(short.get('risk_score') or 0)} "
+            f"Risico over 5 jaar: {pct(short.get('risk_score') or 0)} "
             f"({risk_band_nl(short.get('risk_label') or 'medium')})",
-            f"Lange termijn: {pct(longr.get('risk_score') or 0)} "
-            f"({risk_band_nl(longr.get('risk_label') or 'medium')})",
-            "Waarom jij:",
+            "Voor jou:",
             *factor_lines,
             "Doe dit:",
             *tile_lines,

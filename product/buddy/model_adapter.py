@@ -85,6 +85,20 @@ def body_roundness_index(waist_cm: float, height_cm: float) -> float:
     return float(364.2 - 365.5 * math.sqrt(inner))
 
 
+def waist_cm_from_bri(bri: float, height_cm: float) -> float:
+    """Invert Thomas BRI to waist (cm). Height stays fixed."""
+    height_m = float(height_cm) / 100.0
+    denom = (0.5 * height_m) ** 2
+    if denom <= 0:
+        return 0.0
+    ratio = (364.2 - float(bri)) / 365.5
+    ratio = max(0.0, min(1.0, ratio))
+    inner = ratio**2
+    frac = max(0.0, 1.0 - inner)
+    waist_m = 2.0 * math.pi * math.sqrt(frac * denom)
+    return float(waist_m * 100.0)
+
+
 @lru_cache(maxsize=1)
 def load_models(
     models_dir: str | None = None,

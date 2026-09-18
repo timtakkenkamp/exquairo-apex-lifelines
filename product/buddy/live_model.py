@@ -23,7 +23,7 @@ FIXTURES = ROOT / "fixtures"
 # Map model feature ids → buddy factor ids / themes when possible
 _FEATURE_TO_FACTOR_ID = {
     "BMI_T1": "bmi",
-    "BRI_T1": "bmi",
+    "BRI_T1": "bri",
     "WAIST_T1": "waist",
     "HIP_T1": "waist",
     "NHDC_T1": "cho",
@@ -173,6 +173,7 @@ def overlay_live_predictions(
     updated["whatif"] = {
         "weight_kg": round(body_weight, 1),
         "bmi": round(new_bmi, 1),
+        "bri": round(body_roundness_index(float(live_waist or body["waist_cm"]), height_cm), 2),
         "height_cm": height_cm,
         "waist_cm": round(live_waist, 0) if live_waist is not None else None,
         "delta_kg": round(body_weight - body["weight_kg"], 1),
